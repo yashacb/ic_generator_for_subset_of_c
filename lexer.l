@@ -99,5 +99,5 @@ int main()
 	sm = sm_new(cur_scope , st) ;
 	st = sm_find(sm , cur_scope) ;
 	yyparse() ;
-	sm_print(sm) ;
+	sm_print_table(sm) ;
 }

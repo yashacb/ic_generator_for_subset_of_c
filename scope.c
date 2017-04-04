@@ -20,6 +20,38 @@ void sm_print(scope_map* sm)
 
 int max_scope = 0 ;
 
+void sm_print_table(scope_map* sm)
+{
+	if(sm == NULL)
+		return ;
+	printf("Printing whole table :\n");
+	scope_map* cur = sm ;
+	while(cur != NULL)
+	{
+		symbol_table_row* list = cur -> st -> list ;
+		while(list != NULL && list -> scope == cur -> scope)
+		{
+			printf("{ ") ;
+			printf("name : %s , ", list -> name) ;
+			printf("type : %s , " , to_str_data_type(list -> type)) ;
+			printf("scope : %d , " , list -> scope) ;
+			printf("eletype : %s" , to_str_eletype(list -> eletype)) ;
+			if(list -> dimlist != NULL)
+			{
+				printf(" , dimlist : ") ;
+				list_print(list -> dimlist) ;
+			}
+			printf(" }") ;
+			list = list -> next ;
+			if(list != NULL)
+				printf(" ,\n");
+			else
+				printf("");
+		}
+		cur = cur -> next ;
+	}
+}
+
 int sm_get_scope()
 {
 	return ++max_scope ;

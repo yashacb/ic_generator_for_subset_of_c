@@ -1,0 +1,108 @@
+#include "list.c"
+
+extern char* to_str_data_type(int type) ;
+extern char* to_str_eletype(int type) ;
+
+enum data_type
+{
+	SIMPLE , ARRAY , STRUCT 
+} ;
+
+struct symbol_table ;
+
+typedef struct symbol_table_row
+{
+	char* name ;
+	int type ;
+	int eletype ;
+	struct symbol_table_row* next ;
+	list* dimlist ;
+	int scope ;
+
+}symbol_table_row ;
+
+typedef struct symbol_table
+{
+	int size ;
+	symbol_table_row* list ;
+}symbol_table ;
+
+void st_print(symbol_table* st)
+{
+	symbol_table_row* cur = st -> list ;
+	printf("[") ;
+	while(cur != NULL)
+	{
+		printf("{ ") ;
+		printf("name : %s , " , cur -> name) ;
+		printf("type : %s , " , to_str_data_type(cur -> type)) ;
+		printf("scope : %d , " , cur -> scope) ;
+		printf("eletype : %s" , to_str_eletype(cur -> eletype)) ;
+		if(cur -> dimlist != NULL)
+		{
+			printf(" , dimlist : ") ;
+			list_print(cur -> dimlist) ;
+		}
+		printf(" }") ;
+		cur = cur -> next ;	
+		if(cur != NULL)
+			printf(" ,\n");
+		else
+			printf("");
+	}
+	printf("]\n");
+}
+
+symbol_table_row* st_find(symbol_table* st , char* name , int scope)
+{
+	if(st == NULL)
+		return NULL ;
+	symbol_table_row* a = st -> list ;
+	symbol_table_row* res = NULL ;
+	while(a != NULL)
+	{
+		if(strcmp(name , a -> name) == 0)
+		{
+			return a ;
+		}
+		a = a -> next ;
+	}
+	return res ;
+}
+
+symbol_table_row* st_find_strict(symbol_table* st , char* name , int scope)
+{
+	if(st == NULL)
+		return NULL ;
+	symbol_table_row* a = st -> list ;
+	symbol_table_row* res = NULL ;
+	while(a != NULL)
+	{
+		if(strcmp(name , a -> name) == 0 && a -> scope == scope)
+		{
+			return a ;
+		}
+		a = a -> next ;
+	}
+	return res ;
+}
+
+void st_add(symbol_table* st , char* name , int type , 
+	int eletype , list* dimlist , int scope)
+{
+	symbol_table_row* new_row = (symbol_table_row*) malloc(sizeof(symbol_table_row)) ;
+	new_row -> name = name ;
+	new_row -> type = type ;
+	new_row -> eletype = eletype ;
+	new_row -> dimlist = dimlist ;
+	new_row -> scope = scope ;
+	new_row -> next = st -> list ;
+	st -> list = new_row ;	
+}
+
+symbol_table* st_new()
+{
+	symbol_table* new_st = (symbol_table*) malloc(sizeof(symbol_table)) ;
+	new_st -> size = 0 ;
+	new_st -> list = NULL ;
+}

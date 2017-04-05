@@ -1,7 +1,11 @@
-int a ;
-a = 4 ;
+struct node
+{
+	int a , b ;
+} ;
 struct sttt{
 	int a ;
 	int b ;
+	struct node n ;
 } ;
 struct sttt ab ;
+ab.n.c = 32 ;

@@ -40,7 +40,7 @@ void st_print(symbol_table* st)
 		printf("name : %s , " , cur -> name) ;
 		printf("type : %s , " , to_str_data_type(cur -> type)) ;
 		printf("scope : %d , " , cur -> scope) ;
-		printf("eletype : %s" , to_str_eletype(cur -> eletype)) ;
+		printf("eletype : %d" , (cur -> eletype)) ;
 		if(cur -> dimlist != NULL)
 		{
 			printf(" , dimlist : ") ;

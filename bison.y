@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "scope.c"
+#include "mystring.c"
 int st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope) ;
 
 symbol_table* st = NULL ;
@@ -153,14 +154,21 @@ DIM_LIST : '[' V_INT ']' {
 	}
 	; 
 ASG : LVALUE {
-		if(st_find_lvalue(st , sdf , $1.val , cur_scope) == 0)
+		char* dup = dupstr($1.val) ;
+		if(st_find_lvalue(st , sdf , dup , cur_scope) == 0)
 		{
-			printf("Semantic error : Unable to resolve : %s on line no : %d .\n", $1.val , line_no) ;
+			printf("Semantic error : Unable to resolve lvalue : %s on line no : %d .\n", $1.val , line_no) ;
+			exit(0) ;
 		}
-	} '=' EXPR ';'
+	} '=' EXPR ';' { $$.type = $1.type ;}
 	;
-LVALUE : LVALUE '.' ID
+LVALUE : LVALUE '.' ID{
+		$$.type = $3.type ;
+		char* temp = strcat2($1.val , ".") ;
+		$$.val = strcat2(temp , $3.val) ;
+	}
 	| ID { $$.type = $1.type ; 
+		$$.val = dupstr($1.val) ;
 	 }
 	;
 EXPR : V_INT
@@ -183,8 +191,7 @@ int st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope
 			token = strtok(NULL , ".") ;
 			if(row -> type != T_STRUCT)
 				break ;
-			struct_def_row* res = sdf_find_row(sdf , token) ;
-			cur = res -> st ;
+			cur = sdf_find_row(sdf , row -> eletype) ;
 		}
 	}
 	if(token == NULL)

@@ -1,5 +1,7 @@
 #include "symbol.c"
 
+void sdf_print(struct_def* sdf) ;
+
 struct struct_def_row ;
 
 typedef struct struct_def
@@ -38,16 +40,24 @@ int sdf_find(struct_def* sdf , char* name)
 	return ind != -1 ? len - 1 - ind : -1 ;
 }
 
-struct_def_row* sdf_find_row(struct_def* sdf , char* name)
+symbol_table* sdf_find_row(struct_def* sdf , int ind) // ind is from last of the list
 {
-	int ind = sdf_find(sdf , name) ;
-	if(ind == -1)
-		return NULL ;
+	int len = 0 ;
+	struct_def_row* cur = sdf -> list ;
+	while(cur != NULL)
+	{
+		len++ ;
+		cur = cur -> next ;
+	}
+	int find = len - 1 - ind ;
+	cur = sdf -> list ;
 	int i = 0 ;
-	struct_def_row* res = sdf -> list ;
-	while(i < ind)
-		res = res -> next ;
-	return res ;
+	while(i < find)
+	{
+		cur = cur -> next ;
+		i++ ;
+	}
+	return cur -> st ;
 }
 
 void sdf_add(struct_def* sdf , char* name , int scope , symbol_table* st)

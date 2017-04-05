@@ -52,6 +52,10 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		// printf("Lex : } detected\n") ; 
 		return '}' ; 
 		}
+"=" 	{
+		// printf("Lex : = detected\n") ; 
+		return '=' ; 
+		}
 {id}	{
 		char* copy = (char*) malloc(sizeof(strlen(yytext) + 1)) ;
 		strcpy(copy , yytext) ;
@@ -60,11 +64,25 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		// printf("Lex : Id detected\n") ; 
 		return ID ;
 		}
-[0-9]+ {
-			yylval.e.type = T_INT ;
-			yylval.e.val = atoi(yytext) ;
-			return NUM ;
+[0-9]*"."[0-9]+ {
+			yylval.c.type = V_INT ;
+			yylval.c.f_val = atof(yytext) ;
+			return V_FLOAT ;
 	   }		
+[0-9]+ {
+			yylval.c.type = V_INT ;
+			yylval.c.i_val = atoi(yytext) ;
+			return V_INT ;
+	   }
+"'"[a-zA-Z0-9_]"'" {
+			yylval.c.type = V_CHAR ;
+			yylval.c.c_val = yytext[1] ;
+			return V_CHAR ;
+		}
+"." 	{
+		// printf("Lex : . detected\n") ; 
+		return '.' ; 
+		}
 "\n"    { line_no++ ;}
 .	 ;
 
@@ -100,4 +118,6 @@ int main()
 	st = sm_find(sm , cur_scope) ;
 	yyparse() ;
 	sm_print_table(sm) ;
+	printf("\n\n") ;
+	sdf_print(sdf) ;
 }

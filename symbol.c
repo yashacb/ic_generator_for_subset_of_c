@@ -3,6 +3,9 @@
 extern char* to_str_data_type(int type) ;
 extern char* to_str_eletype(int type) ;
 
+typedef struct struct_def struct_def ;
+typedef struct struct_def_row struct_def_row ;
+
 enum data_type
 {
 	SIMPLE , ARRAY , STRUCT 

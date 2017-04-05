@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "scope.c"
+int st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope) ;
 
 symbol_table* st = NULL ;
 struct_def* sdf = NULL ;
@@ -31,8 +32,14 @@ typedef struct id{
 
 typedef struct expr{
 	int type ;
-	int val ;
 }expr ;
+
+typedef struct constant{
+	int type ;
+	int i_val ;
+	float f_val ;
+	char c_val ;
+} constant;
 //
 
 %}
@@ -40,6 +47,7 @@ typedef struct expr{
 %union{
 	decl d ;
 	expr e ;
+	constant c ;
 	id i ;
 	list* l ;
 }
@@ -51,13 +59,18 @@ typedef struct expr{
 %token <d> T_CHAR
 %token <d> T_STRUCT
 %token <i> ID
-%token <e> NUM
+%token <c> V_INT
+%token <c> V_FLOAT
+%token <c> V_CHAR
 
 %type <d> DECL_LIST
 %type <d> DECL
 %type <d> VAR_LIST
 %type <d> VAR
 %type <l> DIM_LIST
+%type <c> ASG
+%type <i> LVALUE
+%type <c> EXPR
 
 %start STMTS
 
@@ -71,6 +84,7 @@ STMTS : DECL STMTS
 	} STMTS '}' { cur_scope = sstk_pop(sstk) ; 
 		st = sm_find(sm , cur_scope) ;
 	} STMTS
+	| ASG STMTS
 	|
 	;
 DECL_LIST :  DECL_LIST DECL
@@ -93,10 +107,17 @@ TEMP : '{' {
 	| ID {
 		if(st_find_strict(st , $1.val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s in scope id : %d\n" , $1.val , cur_scope) ;
+			printf("Semantic error : Redeclaration of variable %s on line no : %d\n" , $1.val , line_no) ;
 			exit(0) ;
 		}
-		st_add(st , $1.val , cur_dt , -1 , NULL , cur_scope) ;
+		int ind = sdf_find(sdf , $<i>0.val) ; // This index is from the last !!
+		if(ind != -1)
+			st_add(st , $1.val , cur_dt , ind , NULL , cur_scope) ;
+		else
+		{
+			printf("Seamntic error : Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
+			exit(0) ;
+		}
 	} 
 	;
 VAR_LIST : VAR_LIST ',' VAR {
@@ -124,12 +145,49 @@ VAR : ID {
 		st_add(st , $1.val , ARRAY , $1.type , list_reverse($2) , cur_scope) ;
 	}
 	;
-DIM_LIST : '[' NUM ']' {
-		$$ = list_add(NULL , $2.val) ;
+DIM_LIST : '[' V_INT ']' {
+		$$ = list_add(NULL , $2.i_val) ;
 	}
-	| DIM_LIST '[' NUM ']' {
-		$$ = list_add($1 , $3.val) ;
+	| DIM_LIST '[' V_INT ']' {
+		$$ = list_add($1 , $3.i_val) ;
 	}
 	; 
+ASG : LVALUE {
+		if(st_find_lvalue(st , sdf , $1.val , cur_scope) == 0)
+		{
+			printf("Semantic error : Unable to resolve : %s on line no : %d .\n", $1.val , line_no) ;
+		}
+	} '=' EXPR ';'
+	;
+LVALUE : LVALUE '.' ID
+	| ID { $$.type = $1.type ; 
+	 }
+	;
+EXPR : V_INT
+	| V_FLOAT
+	| V_CHAR
+	;
 %%
-
+ // check if lvalue can be formed from the symbol table and struct table. This function modifies lvalue. 
+int st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope)
+{
+	char* token = strtok(lvalue , ".") ;
+	symbol_table* cur = st ;
+	while(token != NULL)
+	{
+		symbol_table_row* row = st_find(cur , token , scope) ;
+		if(row == NULL)
+			return 0 ;
+		else
+		{
+			token = strtok(NULL , ".") ;
+			if(row -> type != T_STRUCT)
+				break ;
+			struct_def_row* res = sdf_find_row(sdf , token) ;
+			cur = res -> st ;
+		}
+	}
+	if(token == NULL)
+		return 1 ;
+	return 0 ;
+}

@@ -1,11 +1,7 @@
 int a ;
-{
-	int a[10] ;
-	{
-		int b ;
-	}
-}
-{
-	int c ;
-}
-int b ;
+a = 4 ;
+struct sttt{
+	int a ;
+	int b ;
+} ;
+struct sttt ab ;

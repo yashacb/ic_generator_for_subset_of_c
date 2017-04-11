@@ -44,6 +44,14 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		// printf("Lex : ] detected\n") ; 
 		return ']' ; 
 		}
+"(" 	{
+		// printf("Lex : () detected\n") ; 
+		return '(' ; 
+		}
+")" 	{
+		// printf("Lex : ) detected\n") ; 
+		return ')' ; 
+		}
 "{" 	{
 		// printf("Lex : { detected\n") ; 
 		return '{' ; 
@@ -56,12 +64,28 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		// printf("Lex : = detected\n") ; 
 		return '=' ; 
 		}
+"*" 	{
+		// printf("Lex : * detected\n") ; 
+		return '*' ; 
+		}
+"+" 	{
+		// printf("Lex : * detected\n") ; 
+		return '+' ; 
+		}
+"/" 	{
+		// printf("Lex : * detected\n") ; 
+		return '/' ; 
+		}
+"-" 	{
+		// printf("Lex : * detected\n") ; 
+		return '-' ; 		
+		}
 {id}	{
 		char* copy = (char*) malloc(sizeof(strlen(yytext) + 1)) ;
 		strcpy(copy , yytext) ;
 		yylval.i.val = copy ;
 		yylval.i.type = cur_dt ;
-		// printf("Lex : Id detected\n") ; 
+		// printf("Lex : %s detected\n" , yytext) ; 
 		return ID ;
 		}
 [0-9]*"."[0-9]+ {
@@ -98,6 +122,11 @@ char* to_str_data_type(int type)
 	return "struct" ;
 }
 
+int is_array(int t)
+{
+	return t == ARRAY ;
+}
+
 char* to_str_eletype(int type)
 {
 	if(type == T_INT)
@@ -107,6 +136,47 @@ char* to_str_eletype(int type)
 	if(type == T_CHAR)
 		return "char" ;
 	return "struct" ;
+}
+
+int is_char(int t)
+{
+	return t == T_CHAR || t == V_CHAR ;
+}
+
+int is_int(int t)
+{
+	return t == T_INT || t == V_INT ;
+}
+
+int is_float(int t)
+{
+	return t == T_FLOAT || t == V_FLOAT ;
+}
+
+int is_struct(int t)
+{
+	return !is_int(t) && !is_char(t) && !is_float(t) ;
+}
+
+int expr_type(int t1 , int t2)
+{
+	if(is_struct(t1) && is_struct(t2))
+	{
+		if(t1 == t2)
+			return t1 ;
+		return -1 ;
+	}
+	if(is_struct(t1) || is_struct(t2))
+		return -1 ; // error 
+
+	if(is_char(t1) && is_char(t2))
+		return T_CHAR ;
+	if(is_char(t1) || is_char(t2))
+		return -1 ; // error 
+	if(is_float(t1) || is_float(t2))
+		return T_FLOAT ;
+	if(is_int(t1) || is_int(t2))
+		return T_INT ;
 }
 
 int main()
@@ -119,5 +189,6 @@ int main()
 	yyparse() ;
 	sm_print_table(sm) ;
 	printf("\n\n") ;
-	sdf_print(sdf) ;
+	// sdf_print(sdf) ;
+	printf("Parse successful\n");
 }

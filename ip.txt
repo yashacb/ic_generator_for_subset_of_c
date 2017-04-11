@@ -1,11 +1,4 @@
-struct node
-{
-	int a , b ;
-} ;
-struct sttt{
-	int a ;
-	int b ;
-	struct node n ;
-} ;
-struct sttt ab ;
-ab.n.c = 32 ;
+int b[20][30] ;
+float a ;
+
+b[a] = 23 ;

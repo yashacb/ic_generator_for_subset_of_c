@@ -5,25 +5,35 @@
 
 #include "scope.c"
 #include "mystring.c"
-int st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope) ;
+symbol_table_row* st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope) ;
+int expr_type(int t1 , int t2) ;
+int is_int(int t) ;
+int is_array(int t) ;
 
 symbol_table* st = NULL ;
 struct_def* sdf = NULL ;
 scope_stack* sstk = NULL ;
 scope_map* sm = NULL ;
+symbol_table_row* cur_lval = NULL ;
+int ind_dim = 0 ;
 
 int line_no = 1 ;
 int cur_scope = 0 ;
 int cur_dt = 0 ;
+int sdt ;
+
+char* to_str_eletype(int type) ;
 
 void yyerror (char const *s)
 {
 	printf("Parse error on line no. %d : %s\n" , line_no , s) ;
+	exit(0) ;
 }
 
 // Union types
 typedef struct decl{
 	int type ;
+	symbol_table_row* ptr ;
 }decl ;
 
 typedef struct id{
@@ -66,12 +76,15 @@ typedef struct constant{
 
 %type <d> DECL_LIST
 %type <d> DECL
+%type <d> SVAR_LIST
 %type <d> VAR_LIST
 %type <d> VAR
 %type <l> DIM_LIST
 %type <c> ASG
 %type <i> LVALUE
-%type <c> EXPR
+%type <e> EXPR
+%type <e> TERM
+%type <e> FACTOR
 
 %start STMTS
 
@@ -105,7 +118,9 @@ TEMP : '{' {
 		sdf_add(sdf , $<i>0.val , cur_scope , st) ;
 		st = sm_find(sm , cur_scope) ; 
 	}
-	| ID {
+	| SVAR_LIST	
+	;
+SVAR_LIST : ID {
 		if(st_find_strict(st , $1.val , cur_scope) != NULL)
 		{
 			printf("Semantic error : Redeclaration of variable %s on line no : %d\n" , $1.val , line_no) ;
@@ -119,7 +134,24 @@ TEMP : '{' {
 			printf("Seamntic error : Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
 			exit(0) ;
 		}
-	} 
+		$$.type = T_STRUCT ;
+	}
+	| SVAR_LIST ',' ID {
+		if(st_find_strict(st , $3.val , cur_scope) != NULL)
+		{
+			printf("Semantic error : Redeclaration of variable %s on line no : %d\n" , $3.val , line_no) ;
+			exit(0) ;
+		}
+		int ind = sdf_find(sdf , $<i>0.val) ; // This index is from the last !!
+		if(ind != -1)
+			st_add(st , $3.val , cur_dt , ind , NULL , cur_scope) ;
+		else
+		{
+			printf("Seamntic error : Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
+			exit(0) ;
+		}
+		$$.type = T_STRUCT ;
+	}
 	;
 VAR_LIST : VAR_LIST ',' VAR {
 		$$.type = $3.type ;
@@ -153,39 +185,84 @@ DIM_LIST : '[' V_INT ']' {
 		$$ = list_add($1 , $3.i_val) ;
 	}
 	; 
-ASG : LVALUE {
-		char* dup = dupstr($1.val) ;
-		if(st_find_lvalue(st , sdf , dup , cur_scope) == 0)
+ASG : LVALUE '=' EXPR ';' { 
+		int expr_t = expr_type($1.type , $3.type) ;
+		if(expr_t == -1)
 		{
-			printf("Semantic error : Unable to resolve lvalue : %s on line no : %d .\n", $1.val , line_no) ;
+			printf("Semantic error : Assignment of incompatible types on line no : %d .\n", line_no) ;
 			exit(0) ;
 		}
-	} '=' EXPR ';' { $$.type = $1.type ;}
-	;
-LVALUE : LVALUE '.' ID{
-		$$.type = $3.type ;
-		char* temp = strcat2($1.val , ".") ;
-		$$.val = strcat2(temp , $3.val) ;
+		$$.type = $1.type ; 
 	}
-	| ID { $$.type = $1.type ; 
-		$$.val = dupstr($1.val) ;
-	 }
 	;
-EXPR : V_INT
-	| V_FLOAT
-	| V_CHAR
+LVALUE : ID '.' LVALUE 
+	| ID
+	| ID ARR_LIST
+	;
+ARR_LIST : '[' V_INT ']' 
+	| '[' V_INT ']' ARR_LIST
+	| '[' LVALUE  ']' 
+	| '[' LVALUE  ']' ARR_LIST
+	;
+EXPR : EXPR '+' TERM { 
+		int expr_t = expr_type($1.type , $3.type) ;
+		if(expr_t == -1)
+		{
+			printf("Semantic error : Invalid operands for \'+\' on line_no : %d\n", line_no) ;
+			exit(0) ;
+		}
+		$$.type = expr_t ; 
+	}
+	| EXPR '-' TERM{ 
+		int expr_t = expr_type($1.type , $3.type) ;
+		if(expr_t == -1)
+		{
+			printf("Semantic error : Invalid operands for \'-\' on line_no : %d\n", line_no) ;
+			exit(0) ;
+		}
+		$$.type = expr_t ; 
+	}
+	| TERM { $$.type = $1.type ; }
+	;
+TERM : TERM '*' FACTOR { 
+		int expr_t = expr_type($1.type , $3.type) ;
+		if(expr_t == -1)
+		{
+			printf("Semantic error : Invalid operands for \'*\' on line_no : %d\n", line_no) ;
+			exit(0) ;
+		}
+		$$.type = expr_t ; 
+	}
+	| TERM '/' FACTOR { 
+		int expr_t = expr_type($1.type , $3.type) ;
+		if(expr_t == -1)
+		{
+			printf("Semantic error : Invalid operands for \'/\' on line_no : %d\n", line_no) ;
+			exit(0) ;
+		}
+		$$.type = expr_t ; 
+	}
+	| FACTOR { $$.type = $1.type ; }
+	;
+FACTOR : '(' EXPR ')' { $$.type = $2.type ; }
+	| V_INT { $$.type = $1.type ; }
+	| V_FLOAT { $$.type = $1.type ; }
+	| V_CHAR { $$.type = $1.type ; }
+	| LVALUE {$$.type = $1.type ; }
 	;
 %%
- // check if lvalue can be formed from the symbol table and struct table. This function modifies lvalue. 
-int st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope)
+
+// check if lvalue can be formed from the symbol table and struct table. This function modifies lvalue. 
+symbol_table_row* st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope)
 {
 	char* token = strtok(lvalue , ".") ;
 	symbol_table* cur = st ;
+	symbol_table_row* row = NULL ;
 	while(token != NULL)
 	{
-		symbol_table_row* row = st_find(cur , token , scope) ;
+		row = st_find(cur , token , scope) ;
 		if(row == NULL)
-			return 0 ;
+			return row ;
 		else
 		{
 			token = strtok(NULL , ".") ;
@@ -195,6 +272,6 @@ int st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope
 		}
 	}
 	if(token == NULL)
-		return 1 ;
-	return 0 ;
+		return row ;
+	return NULL ;
 }

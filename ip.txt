@@ -1,4 +1,3 @@
-int b[20][30] ;
-float a ;
+int a ;
 
-b[a] = 23 ;
+a = b ;

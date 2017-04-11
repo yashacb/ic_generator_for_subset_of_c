@@ -123,7 +123,7 @@ TEMP : '{' {
 SVAR_LIST : ID {
 		if(st_find_strict(st , $1.val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s on line no : %d\n" , $1.val , line_no) ;
+			printf("Redeclaration of variable %s on line no : %d\n" , $1.val , line_no) ;
 			exit(0) ;
 		}
 		int ind = sdf_find(sdf , $<i>0.val) ; // This index is from the last !!
@@ -131,7 +131,7 @@ SVAR_LIST : ID {
 			st_add(st , $1.val , cur_dt , ind , NULL , cur_scope) ;
 		else
 		{
-			printf("Seamntic error : Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
+			printf(" Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
 			exit(0) ;
 		}
 		$$.type = T_STRUCT ;
@@ -139,7 +139,7 @@ SVAR_LIST : ID {
 	| SVAR_LIST ',' ID {
 		if(st_find_strict(st , $3.val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s on line no : %d\n" , $3.val , line_no) ;
+			printf("Redeclaration of variable %s on line no : %d\n" , $3.val , line_no) ;
 			exit(0) ;
 		}
 		int ind = sdf_find(sdf , $<i>0.val) ; // This index is from the last !!
@@ -147,7 +147,7 @@ SVAR_LIST : ID {
 			st_add(st , $3.val , cur_dt , ind , NULL , cur_scope) ;
 		else
 		{
-			printf("Seamntic error : Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
+			printf("Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
 			exit(0) ;
 		}
 		$$.type = T_STRUCT ;
@@ -163,7 +163,7 @@ VAR_LIST : VAR_LIST ',' VAR {
 VAR : ID {
 		if(st_find_strict(st , $1.val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s in scope id : %d\n" , $1.val , cur_scope) ;
+			printf("Redeclaration of variable %s in scope id : %d\n" , $1.val , cur_scope) ;
 			exit(0) ;
 		}
 		st_add(st , $1.val , SIMPLE , $1.type , NULL , cur_scope) ;
@@ -172,7 +172,7 @@ VAR : ID {
 	| ID DIM_LIST{
 		if(st_find_strict(st , $1.val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s in scope id : %d\n" , $1.val , cur_scope) ;
+			printf("Redeclaration of variable %s in scope id : %d\n" , $1.val , cur_scope) ;
 			exit(0) ;
 		}
 		st_add(st , $1.val , ARRAY , $1.type , list_reverse($2) , cur_scope) ;
@@ -189,14 +189,22 @@ ASG : LVALUE '=' EXPR ';' {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Assignment of incompatible types on line no : %d .\n", line_no) ;
+			printf(" Assignment of incompatible types on line no : %d .\n", line_no) ;
 			exit(0) ;
 		}
 		$$.type = $1.type ; 
 	}
 	;
 LVALUE : ID '.' LVALUE 
-	| ID
+	| ID {
+		symbol_table_row* res = st_find(st , $1.val , cur_scope) ;
+		if(res == NULL)
+		{
+			printf("%s undeclared , but used on line no : %d\n", $1.val , line_no) ;
+			exit(0) ;
+		}
+		$$.type = res -> eletype ; 
+	}
 	| ID ARR_LIST
 	;
 ARR_LIST : '[' V_INT ']' 
@@ -208,7 +216,7 @@ EXPR : EXPR '+' TERM {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Invalid operands for \'+\' on line_no : %d\n", line_no) ;
+			printf("Invalid operands for \'+\' on line_no : %d\n", line_no) ;
 			exit(0) ;
 		}
 		$$.type = expr_t ; 
@@ -217,7 +225,7 @@ EXPR : EXPR '+' TERM {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Invalid operands for \'-\' on line_no : %d\n", line_no) ;
+			printf("Invalid operands for \'-\' on line_no : %d\n", line_no) ;
 			exit(0) ;
 		}
 		$$.type = expr_t ; 
@@ -228,7 +236,7 @@ TERM : TERM '*' FACTOR {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Invalid operands for \'*\' on line_no : %d\n", line_no) ;
+			printf("Invalid operands for \'*\' on line_no : %d\n", line_no) ;
 			exit(0) ;
 		}
 		$$.type = expr_t ; 
@@ -237,7 +245,7 @@ TERM : TERM '*' FACTOR {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Invalid operands for \'/\' on line_no : %d\n", line_no) ;
+			printf("Invalid operands for \'/\' on line_no : %d\n", line_no) ;
 			exit(0) ;
 		}
 		$$.type = expr_t ; 

@@ -488,13 +488,13 @@ static const yytype_uint8 yytranslate[] =
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_uint8 yyrline[] =
+static const yytype_uint16 yyrline[] =
 {
        0,    93,    93,    94,    98,    94,   101,   102,   104,   105,
      107,   107,   108,   108,   109,   109,   110,   110,   112,   112,
      121,   123,   139,   156,   159,   163,   172,   181,   184,   188,
-     198,   199,   200,   202,   203,   204,   205,   207,   216,   225,
-     227,   236,   245,   247,   248,   249,   250,   251
+     198,   199,   208,   210,   211,   212,   213,   215,   224,   233,
+     235,   244,   253,   255,   256,   257,   258,   259
 };
 #endif
 
@@ -1384,7 +1384,7 @@ yyreduce:
     {
 		if(st_find_strict(st , (yyvsp[0].i).val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s on line no : %d\n" , (yyvsp[0].i).val , line_no) ;
+			printf("Redeclaration of variable %s on line no : %d\n" , (yyvsp[0].i).val , line_no) ;
 			exit(0) ;
 		}
 		int ind = sdf_find(sdf , (yyvsp[-1].i).val) ; // This index is from the last !!
@@ -1392,7 +1392,7 @@ yyreduce:
 			st_add(st , (yyvsp[0].i).val , cur_dt , ind , NULL , cur_scope) ;
 		else
 		{
-			printf("Seamntic error : Unknown type : \" struct %s \" on line no : %d\n", (yyvsp[-1].i).val , line_no) ;
+			printf(" Unknown type : \" struct %s \" on line no : %d\n", (yyvsp[-1].i).val , line_no) ;
 			exit(0) ;
 		}
 		(yyval.d).type = T_STRUCT ;
@@ -1405,7 +1405,7 @@ yyreduce:
     {
 		if(st_find_strict(st , (yyvsp[0].i).val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s on line no : %d\n" , (yyvsp[0].i).val , line_no) ;
+			printf("Redeclaration of variable %s on line no : %d\n" , (yyvsp[0].i).val , line_no) ;
 			exit(0) ;
 		}
 		int ind = sdf_find(sdf , (yyvsp[-3].i).val) ; // This index is from the last !!
@@ -1413,7 +1413,7 @@ yyreduce:
 			st_add(st , (yyvsp[0].i).val , cur_dt , ind , NULL , cur_scope) ;
 		else
 		{
-			printf("Seamntic error : Unknown type : \" struct %s \" on line no : %d\n", (yyvsp[-3].i).val , line_no) ;
+			printf("Unknown type : \" struct %s \" on line no : %d\n", (yyvsp[-3].i).val , line_no) ;
 			exit(0) ;
 		}
 		(yyval.d).type = T_STRUCT ;
@@ -1442,7 +1442,7 @@ yyreduce:
     {
 		if(st_find_strict(st , (yyvsp[0].i).val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s in scope id : %d\n" , (yyvsp[0].i).val , cur_scope) ;
+			printf("Redeclaration of variable %s in scope id : %d\n" , (yyvsp[0].i).val , cur_scope) ;
 			exit(0) ;
 		}
 		st_add(st , (yyvsp[0].i).val , SIMPLE , (yyvsp[0].i).type , NULL , cur_scope) ;
@@ -1456,7 +1456,7 @@ yyreduce:
     {
 		if(st_find_strict(st , (yyvsp[-1].i).val , cur_scope) != NULL)
 		{
-			printf("Semantic error : Redeclaration of variable %s in scope id : %d\n" , (yyvsp[-1].i).val , cur_scope) ;
+			printf("Redeclaration of variable %s in scope id : %d\n" , (yyvsp[-1].i).val , cur_scope) ;
 			exit(0) ;
 		}
 		st_add(st , (yyvsp[-1].i).val , ARRAY , (yyvsp[-1].i).type , list_reverse((yyvsp[0].l)) , cur_scope) ;
@@ -1486,7 +1486,7 @@ yyreduce:
 		int expr_t = expr_type((yyvsp[-3].i).type , (yyvsp[-1].e).type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Assignment of incompatible types on line no : %d .\n", line_no) ;
+			printf(" Assignment of incompatible types on line no : %d .\n", line_no) ;
 			exit(0) ;
 		}
 		(yyval.c).type = (yyvsp[-3].i).type ; 
@@ -1494,27 +1494,27 @@ yyreduce:
 #line 1495 "bison.tab.c" /* yacc.c:1646  */
     break;
 
-  case 37:
-#line 207 "bison.y" /* yacc.c:1646  */
-    { 
-		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
-		if(expr_t == -1)
+  case 31:
+#line 199 "bison.y" /* yacc.c:1646  */
+    {
+		symbol_table_row* res = st_find(st , (yyvsp[0].i).val , cur_scope) ;
+		if(res == NULL)
 		{
-			printf("Semantic error : Invalid operands for \'+\' on line_no : %d\n", line_no) ;
+			printf("%s undeclared , but used on line no : %d\n", (yyvsp[0].i).val , line_no) ;
 			exit(0) ;
 		}
-		(yyval.e).type = expr_t ; 
+		(yyval.i).type = res -> eletype ; 
 	}
 #line 1509 "bison.tab.c" /* yacc.c:1646  */
     break;
 
-  case 38:
-#line 216 "bison.y" /* yacc.c:1646  */
+  case 37:
+#line 215 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Invalid operands for \'-\' on line_no : %d\n", line_no) ;
+			printf("Invalid operands for \'+\' on line_no : %d\n", line_no) ;
 			exit(0) ;
 		}
 		(yyval.e).type = expr_t ; 
@@ -1522,33 +1522,33 @@ yyreduce:
 #line 1523 "bison.tab.c" /* yacc.c:1646  */
     break;
 
-  case 39:
-#line 225 "bison.y" /* yacc.c:1646  */
-    { (yyval.e).type = (yyvsp[0].e).type ; }
-#line 1529 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 40:
-#line 227 "bison.y" /* yacc.c:1646  */
+  case 38:
+#line 224 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Invalid operands for \'*\' on line_no : %d\n", line_no) ;
+			printf("Invalid operands for \'-\' on line_no : %d\n", line_no) ;
 			exit(0) ;
 		}
 		(yyval.e).type = expr_t ; 
 	}
+#line 1537 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 39:
+#line 233 "bison.y" /* yacc.c:1646  */
+    { (yyval.e).type = (yyvsp[0].e).type ; }
 #line 1543 "bison.tab.c" /* yacc.c:1646  */
     break;
 
-  case 41:
-#line 236 "bison.y" /* yacc.c:1646  */
+  case 40:
+#line 235 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1)
 		{
-			printf("Semantic error : Invalid operands for \'/\' on line_no : %d\n", line_no) ;
+			printf("Invalid operands for \'*\' on line_no : %d\n", line_no) ;
 			exit(0) ;
 		}
 		(yyval.e).type = expr_t ; 
@@ -1556,44 +1556,58 @@ yyreduce:
 #line 1557 "bison.tab.c" /* yacc.c:1646  */
     break;
 
+  case 41:
+#line 244 "bison.y" /* yacc.c:1646  */
+    { 
+		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
+		if(expr_t == -1)
+		{
+			printf("Invalid operands for \'/\' on line_no : %d\n", line_no) ;
+			exit(0) ;
+		}
+		(yyval.e).type = expr_t ; 
+	}
+#line 1571 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
   case 42:
-#line 245 "bison.y" /* yacc.c:1646  */
+#line 253 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].e).type ; }
-#line 1563 "bison.tab.c" /* yacc.c:1646  */
+#line 1577 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 247 "bison.y" /* yacc.c:1646  */
+#line 255 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[-1].e).type ; }
-#line 1569 "bison.tab.c" /* yacc.c:1646  */
+#line 1583 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 248 "bison.y" /* yacc.c:1646  */
+#line 256 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].c).type ; }
-#line 1575 "bison.tab.c" /* yacc.c:1646  */
+#line 1589 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 249 "bison.y" /* yacc.c:1646  */
+#line 257 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].c).type ; }
-#line 1581 "bison.tab.c" /* yacc.c:1646  */
+#line 1595 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 250 "bison.y" /* yacc.c:1646  */
+#line 258 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].c).type ; }
-#line 1587 "bison.tab.c" /* yacc.c:1646  */
+#line 1601 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 251 "bison.y" /* yacc.c:1646  */
+#line 259 "bison.y" /* yacc.c:1646  */
     {(yyval.e).type = (yyvsp[0].i).type ; }
-#line 1593 "bison.tab.c" /* yacc.c:1646  */
+#line 1607 "bison.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1597 "bison.tab.c" /* yacc.c:1646  */
+#line 1611 "bison.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1821,7 +1835,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 253 "bison.y" /* yacc.c:1906  */
+#line 261 "bison.y" /* yacc.c:1906  */
 
 
 // check if lvalue can be formed from the symbol table and struct table. This function modifies lvalue. 

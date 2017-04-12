@@ -2037,7 +2037,9 @@ char* to_str_data_type(int type)
 		return "simple" ;
 	if(type == ARRAY)
 		return "array" ;
-	return "struct" ;
+	if(type == STRUCT_T)
+		return "struct" ;
+	return "" ;
 }
 
 int is_array(int t)
@@ -2107,6 +2109,6 @@ int main()
 	yyparse() ;
 	sm_print_table(sm) ;
 	printf("\n\n") ;
-	// sdf_print(sdf) ;
-	printf("Parse successful\n");
+	sdf_print(sdf) ;
+	printf("\n\nParse successful\n");
 }

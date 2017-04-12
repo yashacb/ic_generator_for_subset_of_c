@@ -24,7 +24,7 @@ void sm_print_table(scope_map* sm)
 {
 	if(sm == NULL)
 		return ;
-	printf("Printing whole table :\n");
+	printf("\n\nPrinting whole table :\n");
 	scope_map* cur = sm ;
 	while(cur != NULL)
 	{
@@ -35,7 +35,7 @@ void sm_print_table(scope_map* sm)
 			printf("name : %s , ", list -> name) ;
 			printf("type : %s , " , to_str_data_type(list -> type)) ;
 			printf("scope : %d , " , list -> scope) ;
-			printf("eletype : %s" , to_str_eletype(list -> eletype)) ;
+			printf("eletype : %d" , (list -> eletype)) ;
 			if(list -> dimlist != NULL)
 			{
 				printf(" , dimlist : ") ;

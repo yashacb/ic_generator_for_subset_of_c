@@ -8,7 +8,7 @@ typedef struct struct_def_row struct_def_row ;
 
 enum data_type
 {
-	SIMPLE , ARRAY , STRUCT 
+	SIMPLE , ARRAY , STRUCT_T 
 } ;
 
 struct symbol_table ;

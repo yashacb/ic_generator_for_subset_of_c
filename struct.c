@@ -37,7 +37,7 @@ int sdf_find(struct_def* sdf , char* name)
 		len++ ;
 		cur = cur -> next ;
 	}
-	return ind != -1 ? len - 1 - ind : -1 ;
+	return ind != -1 ? len - 1 - ind : -1 ; // index from last !
 }
 
 symbol_table* sdf_find_row(struct_def* sdf , int ind) // ind is from last of the list

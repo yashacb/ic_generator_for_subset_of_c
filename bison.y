@@ -9,6 +9,7 @@ symbol_table_row* st_find_lvalue(symbol_table* st , struct_def* sdf , char* lval
 int expr_type(int t1 , int t2) ;
 int is_int(int t) ;
 int is_array(int t) ;
+int is_struct(int t) ;
 
 symbol_table* st = NULL ;
 struct_def* sdf = NULL ;
@@ -39,6 +40,8 @@ typedef struct decl{
 typedef struct id{
 	int type ;
 	char* val ;
+	symbol_table_row* ptr ;
+	symbol_table* st ;
 }id ;
 
 typedef struct expr{
@@ -79,9 +82,13 @@ typedef struct constant{
 %type <d> SVAR_LIST
 %type <d> VAR_LIST
 %type <d> VAR
+%type <d> VAR_CHECK
+%type <d> SVAR_CHECK
 %type <l> DIM_LIST
+%type <l> ARR_LIST
 %type <c> ASG
 %type <i> LVALUE
+%type <i> LVALUE_CHECK
 %type <e> EXPR
 %type <e> TERM
 %type <e> FACTOR
@@ -120,37 +127,30 @@ TEMP : '{' {
 	}
 	| SVAR_LIST	
 	;
-SVAR_LIST : ID {
-		if(st_find_strict(st , $1.val , cur_scope) != NULL)
-		{
-			printf("Redeclaration of variable %s on line no : %d\n" , $1.val , line_no) ;
-			exit(0) ;
-		}
-		int ind = sdf_find(sdf , $<i>0.val) ; // This index is from the last !!
-		if(ind != -1)
-			st_add(st , $1.val , cur_dt , ind , NULL , cur_scope) ;
-		else
-		{
-			printf(" Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
-			exit(0) ;
-		}
-		$$.type = T_STRUCT ;
+SVAR_LIST : ID SVAR_CHECK ARR_LIST { 
+		$$.type = $2.type ; 
+		st_add(st , $1.val , STRUCT_T , $2.type , $3 , cur_scope) ;
 	}
-	| SVAR_LIST ',' ID {
-		if(st_find_strict(st , $3.val , cur_scope) != NULL)
+	| SVAR_LIST ',' ID VAR_CHECK  { 
+		$$.type = $1.type ; 
+		st_add(st , $3.val , STRUCT_T , $1.type , NULL , cur_scope) ;
+	}
+	;
+SVAR_CHECK : {
+		if(st_find_strict(st , $<i>0.val , cur_scope) != NULL)
 		{
-			printf("Redeclaration of variable %s on line no : %d\n" , $3.val , line_no) ;
+			printf("Redeclaration of variable %s on line no : %d\n" , $<i>0.val , line_no) ;
 			exit(0) ;
 		}
-		int ind = sdf_find(sdf , $<i>0.val) ; // This index is from the last !!
+		int ind = sdf_find(sdf , $<i>-1.val) ; // This index is from the last !!
 		if(ind != -1)
-			st_add(st , $3.val , cur_dt , ind , NULL , cur_scope) ;
+			; // :p
 		else
 		{
-			printf("Unknown type : \" struct %s \" on line no : %d\n", $<i>0.val , line_no) ;
+			printf("Cannot resolve type of variable %s on line no : %d\n" , $<i>0.val , line_no) ;
 			exit(0) ;
 		}
-		$$.type = T_STRUCT ;
+		$$.type = ind ;
 	}
 	;
 VAR_LIST : VAR_LIST ',' VAR {
@@ -160,22 +160,23 @@ VAR_LIST : VAR_LIST ',' VAR {
 		$$.type = $1.type ;
 	}
 	;
-VAR : ID {
-		if(st_find_strict(st , $1.val , cur_scope) != NULL)
-		{
-			printf("Redeclaration of variable %s in scope id : %d\n" , $1.val , cur_scope) ;
-			exit(0) ;
-		}
+VAR : ID VAR_CHECK { 
+		$$.type = $1.type ; 
 		st_add(st , $1.val , SIMPLE , $1.type , NULL , cur_scope) ;
-		$$.type = $1.type ;
 	}
-	| ID DIM_LIST{
-		if(st_find_strict(st , $1.val , cur_scope) != NULL)
+	| ID VAR_CHECK DIM_LIST { 
+		$$.type = $1.type ; 
+		st_add(st , $1.val , ARRAY , $1.type , list_reverse($3) , cur_scope) ;
+	}
+	;
+VAR_CHECK : 
+	{
+		if(st_find_strict(st , $<i>0.val , cur_scope) != NULL)
 		{
-			printf("Redeclaration of variable %s in scope id : %d\n" , $1.val , cur_scope) ;
+			printf("Redeclaration of variable %s in scope id : %d\n" , $<i>0.val , cur_scope) ;
 			exit(0) ;
 		}
-		st_add(st , $1.val , ARRAY , $1.type , list_reverse($2) , cur_scope) ;
+		$$.type = $<i>0.type ;
 	}
 	;
 DIM_LIST : '[' V_INT ']' {
@@ -195,26 +196,79 @@ ASG : LVALUE '=' EXPR ';' {
 		$$.type = $1.type ; 
 	}
 	;
-LVALUE : ID '.' LVALUE 
-	| ID {
-		symbol_table_row* res = st_find(st , $1.val , cur_scope) ;
+LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
+		$$.type = $4.type ;
+		$$.ptr = $4.ptr ;
+		$$.st = $4.st ;
+		$$.val = $4.val ;
+	}
+	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ; } LVALUE_CHECK {
+		$$.ptr = $6.ptr ;
+		$$.st = $6.st ;
+		$$.val = $6.val ;
+		$$.type = $6.type ;
+	}
+	;
+LVALUE_CHECK : {
+		char* val = $<i>-2.val ;
+		list* cur = $<l>-1 ;
+		symbol_table* cur_st = $<i>0.st ;
+		symbol_table_row* res = st_find(cur_st , val , cur_scope) ;
+		// Error checking can be improved .
 		if(res == NULL)
 		{
-			printf("%s undeclared , but used on line no : %d\n", $1.val , line_no) ;
+			printf("%s not found in current scope on line no : %d\n", val , cur_scope) ;
 			exit(0) ;
 		}
-		$$.type = res -> eletype ; 
+		list* dimlist = res -> dimlist ;
+		if(list_length(cur) < list_length(dimlist))
+		{
+			printf("Incorrect dimensions of %s on line no : %d\n", val , line_no) ;
+			exit(0) ;
+		}
+		if(list_length(cur) > list_length(dimlist))
+		{
+			printf("Incorrect dimensions of %s on line no : %d\n", val , line_no) ;
+			exit(0) ;
+		}
+		while(cur != NULL && dimlist != NULL)
+		{
+			if(cur -> val != -1)
+			{
+				if(cur -> val >= dimlist -> val)
+				{
+					printf("Array index out of bounds for %s on line no : %d\n", val , line_no) ;
+					exit(0) ;
+				}
+			}
+			cur = cur -> next ;
+			dimlist = dimlist -> next ;
+		}
+		$$.ptr = res ;
+		$$.val = val ;
+		$$.type = res -> eletype ;
+		if(res -> type == STRUCT_T)
+			$$.st = sdf_find_row(sdf , res -> eletype) ;
+		else
+			$$.st = NULL ;
 	}
-	| ID ARR_LIST
 	;
-ARR_LIST : '[' V_INT ']' 
-	| '[' V_INT ']' ARR_LIST
-	| '[' LVALUE  ']' 
-	| '[' LVALUE  ']' ARR_LIST
+ARR_LIST : { $$ = NULL ; }
+	| '[' V_INT ']' ARR_LIST { 
+		if($2.i_val < 0) 
+		{
+			printf("Array index out of bounds on line no : %d\n", line_no) ;
+			exit(0) ;
+		}
+		$$ = list_add($4 , $2.i_val) ;
+	}
+	| '[' LVALUE  ']' ARR_LIST {
+		$$ = list_add($4 , -1) ;
+	}
 	;
 EXPR : EXPR '+' TERM { 
 		int expr_t = expr_type($1.type , $3.type) ;
-		if(expr_t == -1)
+		if(expr_t == -1 || is_struct($1.type))
 		{
 			printf("Invalid operands for \'+\' on line_no : %d\n", line_no) ;
 			exit(0) ;
@@ -223,7 +277,7 @@ EXPR : EXPR '+' TERM {
 	}
 	| EXPR '-' TERM{ 
 		int expr_t = expr_type($1.type , $3.type) ;
-		if(expr_t == -1)
+		if(expr_t == -1 || is_struct($1.type))
 		{
 			printf("Invalid operands for \'-\' on line_no : %d\n", line_no) ;
 			exit(0) ;
@@ -234,7 +288,7 @@ EXPR : EXPR '+' TERM {
 	;
 TERM : TERM '*' FACTOR { 
 		int expr_t = expr_type($1.type , $3.type) ;
-		if(expr_t == -1)
+		if(expr_t == -1 || is_struct($1.type))
 		{
 			printf("Invalid operands for \'*\' on line_no : %d\n", line_no) ;
 			exit(0) ;
@@ -243,7 +297,7 @@ TERM : TERM '*' FACTOR {
 	}
 	| TERM '/' FACTOR { 
 		int expr_t = expr_type($1.type , $3.type) ;
-		if(expr_t == -1)
+		if(expr_t == -1 || is_struct($1.type))
 		{
 			printf("Invalid operands for \'/\' on line_no : %d\n", line_no) ;
 			exit(0) ;
@@ -274,7 +328,7 @@ symbol_table_row* st_find_lvalue(symbol_table* st , struct_def* sdf , char* lval
 		else
 		{
 			token = strtok(NULL , ".") ;
-			if(row -> type != T_STRUCT)
+			if(row -> type != STRUCT_T)
 				break ;
 			cur = sdf_find_row(sdf , row -> eletype) ;
 		}

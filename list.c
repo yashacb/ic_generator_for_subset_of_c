@@ -36,3 +36,10 @@ void list_print(list* head)
 	}
 	printf(" ]");
 }
+
+int list_length(list* head)
+{
+	if(head == NULL)
+		return 0 ;
+	return 1 + list_length(head -> next) ;
+}

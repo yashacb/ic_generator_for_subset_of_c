@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "scope.c"
+#include "func.c"
 #include "mystring.c"
 symbol_table_row* st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope) ;
 int expr_type(int t1 , int t2) ;
@@ -11,17 +11,18 @@ int is_int(int t) ;
 int is_array(int t) ;
 int is_struct(int t) ;
 
+func_table* ft = NULL ;
 symbol_table* st = NULL ;
 struct_def* sdf = NULL ;
 scope_stack* sstk = NULL ;
 scope_map* sm = NULL ;
-symbol_table_row* cur_lval = NULL ;
 int ind_dim = 0 ;
 
 int line_no = 1 ;
 int cur_scope = 0 ;
 int cur_dt = 0 ;
 int sdt ;
+func_table_row* cur_func_ptr = NULL ; // the functions which is being defiend 
 
 char* to_str_eletype(int type) ;
 
@@ -64,6 +65,8 @@ typedef struct constant{
 	constant c ;
 	id i ;
 	list* l ;
+	func_table_row* f ;
+	int np ; // no. of parameters . Used by PARAM_LIST .
 }
 
 %define parse.error verbose
@@ -77,6 +80,7 @@ typedef struct constant{
 %token <c> V_FLOAT
 %token <c> V_CHAR
 
+%type <d> TYPE
 %type <d> DECL_LIST
 %type <d> DECL
 %type <d> SVAR_LIST
@@ -92,10 +96,41 @@ typedef struct constant{
 %type <e> EXPR
 %type <e> TERM
 %type <e> FACTOR
+%type <f> FUNC_DEF
+%type <np> PARAM_LIST
 
-%start STMTS
+%start S
 
 %%
+
+S : FUNC_DEF S
+	| DECL S
+	|
+	;
+FUNC_DEF : TYPE ID {		
+		cur_func_ptr = ft_add(ft , $2.val , NULL , NULL , $1.type , 0) ;
+		sstk_push(sstk , cur_scope) ;
+		cur_scope = sm_get_scope() ;
+		sm = sm_add(sm , cur_scope , st) ;
+		st = sm_find(sm , cur_scope) ;
+	} '(' PARAM_LIST ')' {
+		cur_func_ptr -> param_list = st_new() ;
+		cur_func_ptr -> param_list -> list = st -> list ;
+		cur_func_ptr -> num_param = $5 ;
+	} '{' STMTS '}' { 
+		cur_func_ptr -> local_list = st ;
+		cur_scope = sstk_pop(sstk) ;
+		st = sm_find(sm , cur_scope) ;
+		$$ = NULL ; }
+PARAM_LIST : TYPE VAR { // need to add support for structs !
+		$2.ptr -> eletype = $1.type ;
+	} ',' PARAM_LIST { $$ = 1 +  $5 ; }
+	| TYPE VAR {
+		$2.ptr -> eletype = $1.type ;
+		$$ = 1 ;
+	}
+	| { $$ = 0 ; }
+	;
 
 STMTS : DECL STMTS
 	| '{' { sstk_push(sstk , cur_scope) ;
@@ -111,9 +146,7 @@ STMTS : DECL STMTS
 DECL_LIST :  DECL_LIST DECL
 		| DECL
 		;
-DECL :   T_INT { cur_dt = T_INT ;} VAR_LIST ';'
-	| T_FLOAT { cur_dt = T_FLOAT ;} VAR_LIST ';'
-	| T_CHAR { cur_dt = T_CHAR ;} VAR_LIST ';'
+DECL :   TYPE VAR_LIST ';'
 	| T_STRUCT {cur_dt = T_STRUCT ;} ID TEMP ';'
 	;
 TEMP : '{' { 
@@ -139,7 +172,7 @@ SVAR_LIST : ID SVAR_CHECK ARR_LIST {
 SVAR_CHECK : {
 		if(st_find_strict(st , $<i>0.val , cur_scope) != NULL)
 		{
-			printf("Redeclaration of variable %s on line no : %d\n" , $<i>0.val , line_no) ;
+			printf("Redeclaration of variable '%s' on line no : %d\n" , $<i>0.val , line_no) ;
 			exit(0) ;
 		}
 		int ind = sdf_find(sdf , $<i>-1.val) ; // This index is from the last !!
@@ -147,7 +180,7 @@ SVAR_CHECK : {
 			; // :p
 		else
 		{
-			printf("Cannot resolve type of variable %s on line no : %d\n" , $<i>0.val , line_no) ;
+			printf("Cannot resolve type of variable '%s' on line no : %d\n" , $<i>0.val , line_no) ;
 			exit(0) ;
 		}
 		$$.type = ind ;
@@ -162,18 +195,18 @@ VAR_LIST : VAR_LIST ',' VAR {
 	;
 VAR : ID VAR_CHECK { 
 		$$.type = $1.type ; 
-		st_add(st , $1.val , SIMPLE , $1.type , NULL , cur_scope) ;
+		$$.ptr = st_add(st , $1.val , SIMPLE , $1.type , NULL , cur_scope) ;
 	}
 	| ID VAR_CHECK DIM_LIST { 
 		$$.type = $1.type ; 
-		st_add(st , $1.val , ARRAY , $1.type , list_reverse($3) , cur_scope) ;
+		$$.ptr = st_add(st , $1.val , ARRAY , $1.type , list_reverse($3) , cur_scope) ;
 	}
 	;
 VAR_CHECK : 
 	{
 		if(st_find_strict(st , $<i>0.val , cur_scope) != NULL)
 		{
-			printf("Redeclaration of variable %s in scope id : %d\n" , $<i>0.val , cur_scope) ;
+			printf("Redeclaration of variable '%s' in scope id : %d\n" , $<i>0.val , cur_scope) ;
 			exit(0) ;
 		}
 		$$.type = $<i>0.type ;
@@ -186,6 +219,7 @@ DIM_LIST : '[' V_INT ']' {
 		$$ = list_add($1 , $3.i_val) ;
 	}
 	; 
+
 ASG : LVALUE '=' EXPR ';' { 
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
@@ -217,18 +251,18 @@ LVALUE_CHECK : {
 		// Error checking can be improved .
 		if(res == NULL)
 		{
-			printf("%s not found in current scope on line no : %d\n", val , cur_scope) ;
+			printf("'%s' not found in current scope on line no : %d\n", val , cur_scope) ;
 			exit(0) ;
 		}
 		list* dimlist = res -> dimlist ;
 		if(list_length(cur) < list_length(dimlist))
 		{
-			printf("Incorrect dimensions of %s on line no : %d\n", val , line_no) ;
+			printf("Incorrect dimensions of '%s' on line no : %d\n", val , line_no) ;
 			exit(0) ;
 		}
 		if(list_length(cur) > list_length(dimlist))
 		{
-			printf("Incorrect dimensions of %s on line no : %d\n", val , line_no) ;
+			printf("Incorrect dimensions of '%s' on line no : %d\n", val , line_no) ;
 			exit(0) ;
 		}
 		while(cur != NULL && dimlist != NULL)
@@ -237,7 +271,7 @@ LVALUE_CHECK : {
 			{
 				if(cur -> val >= dimlist -> val)
 				{
-					printf("Array index out of bounds for %s on line no : %d\n", val , line_no) ;
+					printf("Array index out of bounds for '%s' on line no : %d\n", val , line_no) ;
 					exit(0) ;
 				}
 			}
@@ -312,6 +346,12 @@ FACTOR : '(' EXPR ')' { $$.type = $2.type ; }
 	| V_CHAR { $$.type = $1.type ; }
 	| LVALUE {$$.type = $1.type ; }
 	;
+
+TYPE : T_INT { $$.type = T_INT ; cur_dt = T_INT ;}
+	| T_FLOAT { $$.type = T_FLOAT ; cur_dt = T_FLOAT ;}
+	| T_CHAR { $$.type = T_CHAR ; cur_dt = T_CHAR ;}
+	;
+
 %%
 
 // check if lvalue can be formed from the symbol table and struct table. This function modifies lvalue. 

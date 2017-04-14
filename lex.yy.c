@@ -2106,9 +2106,12 @@ int main()
 	sstk = sstk_new() ;
 	sm = sm_new(cur_scope , st) ;
 	st = sm_find(sm , cur_scope) ;
+	ft = ft_new(NULL) ;
 	yyparse() ;
 	sm_print_table(sm) ;
 	printf("\n\n") ;
 	sdf_print(sdf) ;
-	printf("\n\nParse successful\n");
+	printf("\n") ;
+	ft_print(ft) ;
+	printf("\nParse successful\n");
 }

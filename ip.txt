@@ -1,10 +1,9 @@
 int func2(int p , int q)
 {
-	int r ;
-	r = p + q ;
 }
 
-int func(int a[23] , int b , int c )
+int func(int a[23][23] , int b , int c )
 {
-	func2(a[2] , a[3]) ;
+	int a , a ;
+	func2(a[2][2] , c) ;
 }

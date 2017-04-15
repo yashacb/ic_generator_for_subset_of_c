@@ -21,7 +21,7 @@ symbol_table_row* ft_get_param(func_table_row* ft , int ind)
 		return NULL ;
 	symbol_table_row* cur = ft -> param_list -> list ;
 	int i = 0 ;
-	while(i < ft -> num_param && i < ind)
+	while(cur != NULL && i < ft -> num_param && i < ind)
 	{
 		cur = cur -> next ;
 		i++ ;

@@ -2101,17 +2101,26 @@ int expr_type(int t1 , int t2)
 
 int main()
 {
+	printf("\n");
+	int i = 0 ;
 	st = st_new() ;
 	sdf = sdf_new() ;
 	sstk = sstk_new() ;
 	sm = sm_new(cur_scope , st) ;
 	st = sm_find(sm , cur_scope) ;
 	ft = ft_new(NULL) ;
-	yyparse() ;
-	sm_print_table(sm) ;
-	printf("\n\n") ;
-	sdf_print(sdf) ;
-	printf("\nPrinting function defenitions table:\n\n") ;
-	ft_print(ft) ;
-	printf("\nParse successful\n");
+	yyparse() ;	
+// 	sm_print_table(sm) ;
+// 	printf("\n\n");
+// 	for(i = 0 ; i < 80 ; i++)
+// 		printf("-") ;	
+// 	printf("\n\n") ;
+// 	sdf_print(sdf) ;
+// 	for(i = 0 ; i < 80 ; i++)
+// 		printf("-") ;	
+// 	printf("\n\nPrinting function defenitions table:\n\n") ;
+// 	ft_print(ft) ;
+// 	for(i = 0 ; i < 80 ; i++)
+// 		printf("-") ;	
+// 	printf("\n\nParse successful\n");
 }

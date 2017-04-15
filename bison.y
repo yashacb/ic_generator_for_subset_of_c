@@ -23,6 +23,7 @@ int cur_scope = 0 ;
 int cur_dt = 0 ;
 int sdt ;
 func_table_row* cur_func_ptr = NULL ; // the functions which is being defiend 
+func_table_row* call_func_ptr = NULL ; // the functions which is being called
 
 char* to_str_eletype(int type) ;
 
@@ -66,7 +67,9 @@ typedef struct constant{
 	id i ;
 	list* l ;
 	func_table_row* f ;
-	int np ; // no. of parameters . Used by PARAM_LIST .
+	symbol_table_row* a ; // argument list for function calls
+	int np ; // no. of parameters . Used by PARAM_LIST . This is also used fot ARG_LIST , but in this 
+	// case it respresents the 'np' the argument in the function call .
 }
 
 %define parse.error verbose
@@ -97,7 +100,9 @@ typedef struct constant{
 %type <e> TERM
 %type <e> FACTOR
 %type <f> FUNC_DEF
+%type <f> FUNC_CALL
 %type <np> PARAM_LIST
+%type <np> ARG_LIST
 
 %start S
 
@@ -122,6 +127,7 @@ FUNC_DEF : TYPE ID {
 		cur_scope = sstk_pop(sstk) ;
 		st = sm_find(sm , cur_scope) ;
 		$$ = NULL ; }
+	;
 PARAM_LIST : TYPE VAR { // need to add support for structs !
 		$2.ptr -> eletype = $1.type ;
 	} ',' PARAM_LIST { $$ = 1 +  $5 ; }
@@ -129,7 +135,45 @@ PARAM_LIST : TYPE VAR { // need to add support for structs !
 		$2.ptr -> eletype = $1.type ;
 		$$ = 1 ;
 	}
+	| T_STRUCT ID ID SVAR_CHECK ARR_LIST { 
+		$$ = 1 ; 
+		st_add(st , $3.val , STRUCT_T , $4.type , $5 , cur_scope) ;
+	}
+	| T_STRUCT ID ID SVAR_CHECK ARR_LIST  ',' PARAM_LIST { 
+		$$ = 1 + $7 ; 
+		st_add(st , $3.val , STRUCT_T , $4.type , $5 , cur_scope) ;
+	}
 	| { $$ = 0 ; }
+	;
+FUNC_CALL : ID { 
+		call_func_ptr = ft_find(ft , $1.val) ;		
+		if(call_func_ptr == NULL)
+		{
+			printf("Unknown function '%s' on line_no : %d .\n", $1.val , line_no) ;
+			exit(0) ;
+		}
+	}'(' ARG_LIST ')' ';' { $$ = NULL ;}
+	;
+ARG_LIST : ARG_LIST ',' LVALUE { 
+		$$ = $1 + 1 ; 
+		int num_param = call_func_ptr -> num_param ;
+		// printf("%s %s\n", $3.val , ft_get_param(call_func_ptr , num_param - 1 - $$) -> name) ;
+		if(st_compare(ft_get_param(call_func_ptr , num_param - 1 - $$) , $3.ptr) != 1)
+		{
+			printf("Incorrect parameter type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
+			exit(0) ;
+		}
+	}
+	| LVALUE  { 
+		$$ = 0 ; 
+		int num_param = call_func_ptr -> num_param ;
+		// printf("1%s %s\n", $1.val , ft_get_param(call_func_ptr , num_param - 1 - $$) -> name) ;	
+		if(st_compare(ft_get_param(call_func_ptr , num_param - 1 - $$) , $1.ptr) != 1)
+		{
+			printf("Incorrect parameter type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
+			exit(0) ;
+		}
+	}
 	;
 
 STMTS : DECL STMTS
@@ -141,6 +185,7 @@ STMTS : DECL STMTS
 		st = sm_find(sm , cur_scope) ;
 	} STMTS
 	| ASG STMTS
+	| FUNC_CALL STMTS
 	|
 	;
 DECL_LIST :  DECL_LIST DECL
@@ -180,7 +225,7 @@ SVAR_CHECK : {
 			; // :p
 		else
 		{
-			printf("Cannot resolve type of variable '%s' on line no : %d\n" , $<i>0.val , line_no) ;
+			printf("Unknown type '%s' for variable '%s' on line no : %d\n" , $<i>-1.val , $<i>0.val , line_no) ;
 			exit(0) ;
 		}
 		$$.type = ind ;
@@ -251,7 +296,7 @@ LVALUE_CHECK : {
 		// Error checking can be improved .
 		if(res == NULL)
 		{
-			printf("'%s' not found in current scope on line no : %d\n", val , cur_scope) ;
+			printf("Unable to resolve '%s' on line no : %d\n", val , cur_scope) ;
 			exit(0) ;
 		}
 		list* dimlist = res -> dimlist ;
@@ -297,7 +342,12 @@ ARR_LIST : { $$ = NULL ; }
 		$$ = list_add($4 , $2.i_val) ;
 	}
 	| '[' LVALUE  ']' ARR_LIST {
-		$$ = list_add($4 , -1) ;
+		if($2.ptr -> eletype != T_INT)
+		{
+			printf("Array index is not an integer on line no : %d\n", line_no) ;
+			exit(0) ;
+		}
+		$$ = list_add($4 , -1) ;		
 	}
 	;
 EXPR : EXPR '+' TERM { 

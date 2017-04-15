@@ -193,7 +193,7 @@ int main()
 	sm_print_table(sm) ;
 	printf("\n\n") ;
 	sdf_print(sdf) ;
-	printf("\n") ;
+	printf("\nPrinting function defenitions table:\n\n") ;
 	ft_print(ft) ;
 	printf("\nParse successful\n");
 }

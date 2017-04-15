@@ -30,6 +30,19 @@ typedef struct symbol_table
 	symbol_table_row* list ;
 }symbol_table ;
 
+symbol_table_row* st_get_symbol(symbol_table* st , int ind)
+{
+	int i = 0 ;
+	symbol_table_row* cur = st -> list ;
+	while(i < ind && cur != NULL)
+	{
+		printf("%s\n", cur -> name) ;
+		cur = cur -> next ;
+		i++ ;		
+	}
+	return cur ;
+}
+
 void st_print(symbol_table* st)
 {
 	symbol_table_row* cur = st -> list ;
@@ -119,4 +132,14 @@ int st_size(symbol_table* st)
 		cur = cur -> next ;
 	}
 	return len ;
+}
+
+int st_compare(symbol_table_row* a , symbol_table_row* b)
+{
+	if( a == NULL || b == NULL)
+		return a == NULL && b == NULL ;
+	if(a -> type == b -> type && a -> eletype == b -> eletype && 
+		list_equal(a -> dimlist , b -> dimlist))
+		return 1 ;
+	return 0 ;
 }

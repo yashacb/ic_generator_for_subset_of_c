@@ -15,6 +15,32 @@ typedef struct func_table{
 	func_table_row* list ;
 }func_table ;
 
+symbol_table_row* ft_get_param(func_table_row* ft , int ind)
+{
+	if(ind >= ft -> num_param || ft -> param_list -> list == NULL)
+		return NULL ;
+	symbol_table_row* cur = ft -> param_list -> list ;
+	int i = 0 ;
+	while(i < ft -> num_param && i < ind)
+	{
+		cur = cur -> next ;
+		i++ ;
+	}
+	return cur ;
+}
+
+func_table_row* ft_find(func_table* ft , char* name)
+{
+	func_table_row* cur = ft -> list ;
+	while(cur != NULL)
+	{
+		if(strcmp(cur -> name , name) == 0)
+			return cur ;
+		cur = cur -> next ;
+	}
+	return NULL ;
+}
+
 func_table* ft_new(func_table_row* list)
 {
 	func_table* new = (func_table*) malloc(sizeof(func_table)) ;
@@ -52,7 +78,7 @@ void ft_print(func_table* ft)
 			printf("name : %s , " , cur_param -> name) ;
 			printf("type : %s , " , to_str_data_type(cur_param -> type)) ;
 			printf("scope : %d , " , cur_param -> scope) ;
-			printf("eletype : %s" , to_str_eletype(cur_param -> eletype)) ;
+			printf("eletype : %d" , (cur_param -> eletype)) ;
 			if(cur_param -> dimlist != NULL)
 			{
 				printf(" , dimlist : ") ;
@@ -69,4 +95,5 @@ void ft_print(func_table* ft)
 		st_print(cur -> local_list) ;
 		cur = cur -> next ;
 	}
+	printf("\n");
 }

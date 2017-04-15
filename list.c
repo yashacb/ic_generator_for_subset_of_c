@@ -22,6 +22,17 @@ list* list_reverse(list* head)
 	return res ;
 }
 
+int list_equal(list* a , list* b)
+{
+	if((a == NULL && b != NULL) || (a != NULL && b == NULL))
+		return 0 ;
+	if(a == NULL && b == NULL)
+		return 1 ;
+	if(a -> val == b -> val)
+		return list_equal(a -> next , b -> next) ;
+	return 0 ;
+}
+
 void list_print(list* head)
 {
 	if(head == NULL)

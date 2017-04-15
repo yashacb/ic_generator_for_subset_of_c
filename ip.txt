@@ -1,7 +1,10 @@
-int a[32][23] ;
-char b , c ;
-
-int func(int a[23][100] , int b , int c)
+int func2(int p , int q)
 {
-	a[3][6] = 5 ;	
+	int r ;
+	r = p + q ;
+}
+
+int func(int a[23] , int b , int c )
+{
+	func2(a[2] , c) ;
 }

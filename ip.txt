@@ -6,5 +6,5 @@ int func2(int p , int q)
 
 int func(int a[23] , int b , int c )
 {
-	func2(a[2] , c) ;
+	func2(a[2] , a[3]) ;
 }

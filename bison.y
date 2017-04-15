@@ -5,7 +5,8 @@
 
 #include "func.c"
 #include "mystring.c"
-symbol_table_row* st_find_lvalue(symbol_table* st , struct_def* sdf , char* lvalue , int scope) ;
+
+symbol_table_row* resolve(symbol_table_row* str , list* dimlist) ;
 int expr_type(int t1 , int t2) ;
 int is_int(int t) ;
 int is_array(int t) ;
@@ -44,6 +45,7 @@ typedef struct id{
 	char* val ;
 	symbol_table_row* ptr ;
 	symbol_table* st ;
+	list* dimlist ; // this is used in lvalue .
 }id ;
 
 typedef struct expr{
@@ -158,7 +160,7 @@ ARG_LIST : ARG_LIST ',' LVALUE {
 		$$ = $1 + 1 ; 
 		int num_param = call_func_ptr -> num_param ;
 		// printf("%s %s\n", $3.val , ft_get_param(call_func_ptr , num_param - 1 - $$) -> name) ;
-		if(st_compare(ft_get_param(call_func_ptr , num_param - 1 - $$) , $3.ptr) != 1)
+		if(st_compare(ft_get_param(call_func_ptr , num_param - 1 - $$) , resolve($3.ptr , $3.dimlist)) != 1)
 		{
 			printf("Incorrect parameter type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
 			exit(0) ;
@@ -168,7 +170,7 @@ ARG_LIST : ARG_LIST ',' LVALUE {
 		$$ = 0 ; 
 		int num_param = call_func_ptr -> num_param ;
 		// printf("1%s %s\n", $1.val , ft_get_param(call_func_ptr , num_param - 1 - $$) -> name) ;	
-		if(st_compare(ft_get_param(call_func_ptr , num_param - 1 - $$) , $1.ptr) != 1)
+		if(st_compare(ft_get_param(call_func_ptr , num_param - 1 - $$) , resolve($1.ptr , $1.dimlist)) != 1)
 		{
 			printf("Incorrect parameter type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
 			exit(0) ;
@@ -280,12 +282,14 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 		$$.ptr = $4.ptr ;
 		$$.st = $4.st ;
 		$$.val = $4.val ;
+		$$.dimlist = $2 ;
 	}
 	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ; } LVALUE_CHECK {
 		$$.ptr = $6.ptr ;
 		$$.st = $6.st ;
 		$$.val = $6.val ;
 		$$.type = $6.type ;
+		$$.dimlist = $4 ;
 	}
 	;
 LVALUE_CHECK : {
@@ -426,4 +430,26 @@ symbol_table_row* st_find_lvalue(symbol_table* st , struct_def* sdf , char* lval
 	if(token == NULL)
 		return row ;
 	return NULL ;
+}
+
+symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
+{
+	symbol_table_row* dup = (symbol_table_row*)	 malloc(sizeof(symbol_table_row)) ;
+	dup -> type = str -> type ;
+	dup -> eletype = str -> eletype ;
+	dup -> next = NULL ;
+	dup -> dimlist = str -> dimlist ;
+	dup -> name = str -> name ;
+	if(list_length(dimlist) == list_length(str -> dimlist))
+	{
+		dup -> dimlist = NULL ;
+		dup -> type = SIMPLE ;
+		return dup ;
+	}
+	while(dimlist != NULL)
+	{
+		dimlist = dimlist -> next ;
+		dup -> dimlist = dup -> dimlist -> next ;
+	}
+	return dup ;
 }

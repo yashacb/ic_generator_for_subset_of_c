@@ -139,7 +139,7 @@ int st_compare(symbol_table_row* a , symbol_table_row* b)
 	if( a == NULL || b == NULL)
 		return a == NULL && b == NULL ;
 	if(a -> type == b -> type && a -> eletype == b -> eletype && 
-		list_equal(a -> dimlist , b -> dimlist))
+		list_length(a -> dimlist) == list_length(b -> dimlist))
 		return 1 ;
 	return 0 ;
 }

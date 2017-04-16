@@ -187,7 +187,7 @@ ARG_LIST : ARG_LIST ',' LVALUE {
 			symbol_table_row* found = resolve($1.ptr , $1.dimlist) ;
 			if(st_compare(expected , found) != 1)
 			{
-				printf("Incorrect parameter type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
+				printf("Incorrect argument type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
 				printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
 			}
 		}
@@ -298,8 +298,9 @@ ASG : LVALUE '=' EXPR ';' {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
 		{
-			printf(" Assignment of incompatible types on line no : %d .\n\n", line_no) ;
-			exit(0) ;
+			printf("Assignment of incompatible types on line no : %d .\n", line_no) ;
+			printf("Assigning '%s' to '%s' \n\n", datatype_to_string(resolve($1.ptr , $1.dimlist)) 
+				, to_str_eletype($3.type)) ;
 		}
 		$$.type = $1.type ; 
 	}
@@ -310,13 +311,34 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 		$$.st = $4.st ;
 		$$.val = $4.val ;
 		$$.dimlist = $2 ;
+		$$.val = (char*) malloc(30*sizeof(30)) ;
+		$$.val = strcat2($$.val , $1.val) ;
+		list* cur = $2 ;
+		while(cur != NULL)
+		{
+			cur = cur -> next ;
+			$$.val = strcat2($$.val , "[]") ;
+		}
 	}
-	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ; } LVALUE_CHECK {
-		$$.ptr = $6.ptr ;
-		$$.st = $6.st ;
-		$$.val = $6.val ;
+	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ; } LVALUE_CHECK {		
 		$$.type = $6.type ;
+		$$.ptr = $6.ptr ;
+		$$.st = $6.st ;		
+		$$.val = dupstr($1.val) ;
+		$$.val = strcat2($$.val , ".") ;
+		$$.val = strcat2($$.val , $3.val) ;
+		list* cur = $4 ;
+		while(cur != NULL)
+		{
+			cur = cur -> next ;
+			$$.val = strcat2($$.val , "[]") ;
+		}
 		$$.dimlist = $4 ;
+		if(list_length($1.dimlist) < list_length($1.ptr -> dimlist))
+		{
+			printf("Cannot de-reference a non-struct type '%s' on line no : %d\n", $1.val , line_no) ;
+			$$.type = -1 ;
+		}
 	}
 	;
 LVALUE_CHECK : {
@@ -324,35 +346,36 @@ LVALUE_CHECK : {
 		list* cur = $<l>-1 ;
 		symbol_table* cur_st = $<i>0.st ;
 		symbol_table_row* res = st_find(cur_st , val , cur_scope) ;
-		// Error checking can be improved .
 		if(res == NULL)
 		{
-			printf("Unable to resolve '%s' on line no : %d\n", val , cur_scope) ;
-			exit(0) ;
+			$$.type = -1 ;
 		}
-		list* dimlist = res -> dimlist ;
-		if(list_length(cur) > list_length(dimlist))
+		else
 		{
-			printf("Number of dimensions exceeded for '%s' on line no : %d .\n", val , line_no) ;
-			printf("Declared dimensions : %d . Found dimensions : %d\n\n", list_length(dimlist) , list_length(cur)) ;
-		}
-		while(cur != NULL && dimlist != NULL)
-		{
-			if(cur -> val != -1)
+			list* dimlist = res -> dimlist ;
+			if(list_length(cur) > list_length(dimlist))
 			{
-				if(cur -> val >= dimlist -> val)
-				{
-					printf("Array index out of bounds for '%s' on line no : %d . \n", val , line_no) ;
-					printf("Actual size : %d . Found index : %d\n\n", dimlist -> val , cur -> val) ;
-				}
+				printf("Number of dimensions exceeded for '%s' on line no : %d .\n", val , line_no) ;
+				printf("Declared dimensions : %d . Found dimensions : %d\n\n", list_length(dimlist) , list_length(cur)) ;
 			}
-			cur = cur -> next ;
-			dimlist = dimlist -> next ;
+			while(cur != NULL && dimlist != NULL)
+			{
+				if(cur -> val != -1)
+				{
+					if(cur -> val >= dimlist -> val)
+					{
+						printf("Array index out of bounds for '%s' on line no : %d . \n", val , line_no) ;
+						printf("Actual size : %d . Found index : %d\n\n", dimlist -> val , cur -> val) ;
+					}
+				}
+				cur = cur -> next ;
+				dimlist = dimlist -> next ;
+			}
 		}
 		$$.ptr = res ;
 		$$.val = val ;
-		$$.type = res -> eletype ;
-		if(res -> type == STRUCT_T)
+		$$.type = res != NULL ? res -> eletype : -1 ;
+		if(res != NULL && res -> type == STRUCT_T)
 			$$.st = sdf_find_row(sdf , res -> eletype) -> st ;
 		else
 			$$.st = NULL ;
@@ -431,7 +454,7 @@ TYPE : T_INT { $$.type = T_INT ; cur_dt = T_INT ;}
 %%
 
 symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
-{
+{	
 	symbol_table_row* dup = (symbol_table_row*)	 malloc(sizeof(symbol_table_row)) ;
 	dup -> type = str -> type ;
 	dup -> eletype = str -> eletype ;
@@ -453,8 +476,9 @@ symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
 }
 
 char* datatype_to_string(symbol_table_row* str)
-{
-	char* res = (char*) malloc(100*sizeof(char)) ;	
+{	
+	char* res = (char*) malloc(100*sizeof(char)) ;
+	memset(res , 0 , 100*sizeof(char)) ;
 	if(str -> type == SIMPLE || str -> type == ARRAY)
 	{
 		if(str -> eletype == T_INT)
@@ -472,7 +496,7 @@ char* datatype_to_string(symbol_table_row* str)
 	}
 	else
 	{
-		struct_def_row* ret = sdf_find_row(sdf , str -> eletype) ;
+		struct_def_row* ret = sdf_find_row(sdf , str -> eletype) ;		
 		res = strcat2(res , "struct ") ;
 		res = strcat2(res , ret -> name) ;		
 		list* cur = str -> dimlist ;

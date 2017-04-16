@@ -508,9 +508,9 @@ static const yytype_uint16 yyrline[] =
      145,   149,   153,   157,   159,   159,   167,   181,   197,   198,
      202,   198,   205,   206,   207,   209,   210,   212,   213,   213,
      215,   215,   224,   226,   231,   237,   256,   259,   263,   270,
-     279,   289,   292,   297,   307,   307,   314,   314,   322,   361,
-     362,   370,   379,   388,   397,   399,   408,   417,   419,   420,
-     421,   422,   423,   426,   427,   428
+     279,   289,   292,   297,   308,   308,   323,   323,   344,   384,
+     385,   393,   402,   411,   420,   422,   431,   440,   442,   443,
+     444,   445,   446,   449,   450,   451
 };
 #endif
 
@@ -1494,7 +1494,7 @@ yyreduce:
 			symbol_table_row* found = resolve((yyvsp[0].i).ptr , (yyvsp[0].i).dimlist) ;
 			if(st_compare(expected , found) != 1)
 			{
-				printf("Incorrect parameter type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
+				printf("Incorrect argument type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
 				printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
 			}
 		}
@@ -1665,101 +1665,124 @@ yyreduce:
 		int expr_t = expr_type((yyvsp[-3].i).type , (yyvsp[-1].e).type) ;
 		if(expr_t == -1)
 		{
-			printf(" Assignment of incompatible types on line no : %d .\n\n", line_no) ;
-			exit(0) ;
+			printf("Assignment of incompatible types on line no : %d .\n", line_no) ;
+			printf("Assigning '%s' to '%s' \n\n", datatype_to_string(resolve((yyvsp[-3].i).ptr , (yyvsp[-3].i).dimlist)) 
+				, to_str_eletype((yyvsp[-1].e).type)) ;
 		}
 		(yyval.c).type = (yyvsp[-3].i).type ; 
 	}
-#line 1674 "bison.tab.c" /* yacc.c:1646  */
+#line 1675 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 307 "bison.y" /* yacc.c:1646  */
+#line 308 "bison.y" /* yacc.c:1646  */
     { (yyval.i).st = st ; }
-#line 1680 "bison.tab.c" /* yacc.c:1646  */
+#line 1681 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 307 "bison.y" /* yacc.c:1646  */
+#line 308 "bison.y" /* yacc.c:1646  */
     {
 		(yyval.i).type = (yyvsp[0].i).type ;
 		(yyval.i).ptr = (yyvsp[0].i).ptr ;
 		(yyval.i).st = (yyvsp[0].i).st ;
 		(yyval.i).val = (yyvsp[0].i).val ;
 		(yyval.i).dimlist = (yyvsp[-2].l) ;
+		(yyval.i).val = (char*) malloc(30*sizeof(30)) ;
+		(yyval.i).val = strcat2((yyval.i).val , (yyvsp[-3].i).val) ;
+		list* cur = (yyvsp[-2].l) ;
+		while(cur != NULL)
+		{
+			cur = cur -> next ;
+			(yyval.i).val = strcat2((yyval.i).val , "[]") ;
+		}
 	}
-#line 1692 "bison.tab.c" /* yacc.c:1646  */
+#line 1701 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 314 "bison.y" /* yacc.c:1646  */
+#line 323 "bison.y" /* yacc.c:1646  */
     { (yyval.i).st = (yyvsp[-3].i).st ; }
-#line 1698 "bison.tab.c" /* yacc.c:1646  */
+#line 1707 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 314 "bison.y" /* yacc.c:1646  */
-    {
-		(yyval.i).ptr = (yyvsp[0].i).ptr ;
-		(yyval.i).st = (yyvsp[0].i).st ;
-		(yyval.i).val = (yyvsp[0].i).val ;
+#line 323 "bison.y" /* yacc.c:1646  */
+    {		
 		(yyval.i).type = (yyvsp[0].i).type ;
+		(yyval.i).ptr = (yyvsp[0].i).ptr ;
+		(yyval.i).st = (yyvsp[0].i).st ;		
+		(yyval.i).val = dupstr((yyvsp[-5].i).val) ;
+		(yyval.i).val = strcat2((yyval.i).val , ".") ;
+		(yyval.i).val = strcat2((yyval.i).val , (yyvsp[-3].i).val) ;
+		list* cur = (yyvsp[-2].l) ;
+		while(cur != NULL)
+		{
+			cur = cur -> next ;
+			(yyval.i).val = strcat2((yyval.i).val , "[]") ;
+		}
 		(yyval.i).dimlist = (yyvsp[-2].l) ;
+		if(list_length((yyvsp[-5].i).dimlist) < list_length((yyvsp[-5].i).ptr -> dimlist))
+		{
+			printf("Cannot de-reference a non-struct type '%s' on line no : %d\n", (yyvsp[-5].i).val , line_no) ;
+			(yyval.i).type = -1 ;
+		}
 	}
-#line 1710 "bison.tab.c" /* yacc.c:1646  */
+#line 1732 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 322 "bison.y" /* yacc.c:1646  */
+#line 344 "bison.y" /* yacc.c:1646  */
     {
 		char* val = (yyvsp[(-2) - (0)].i).val ;
 		list* cur = (yyvsp[(-1) - (0)].l) ;
 		symbol_table* cur_st = (yyvsp[0].i).st ;
 		symbol_table_row* res = st_find(cur_st , val , cur_scope) ;
-		// Error checking can be improved .
 		if(res == NULL)
 		{
-			printf("Unable to resolve '%s' on line no : %d\n", val , cur_scope) ;
-			exit(0) ;
+			(yyval.i).type = -1 ;
 		}
-		list* dimlist = res -> dimlist ;
-		if(list_length(cur) > list_length(dimlist))
+		else
 		{
-			printf("Number of dimensions exceeded for '%s' on line no : %d .\n", val , line_no) ;
-			printf("Declared dimensions : %d . Found dimensions : %d\n\n", list_length(dimlist) , list_length(cur)) ;
-		}
-		while(cur != NULL && dimlist != NULL)
-		{
-			if(cur -> val != -1)
+			list* dimlist = res -> dimlist ;
+			if(list_length(cur) > list_length(dimlist))
 			{
-				if(cur -> val >= dimlist -> val)
-				{
-					printf("Array index out of bounds for '%s' on line no : %d . \n", val , line_no) ;
-					printf("Actual size : %d . Found index : %d\n\n", dimlist -> val , cur -> val) ;
-				}
+				printf("Number of dimensions exceeded for '%s' on line no : %d .\n", val , line_no) ;
+				printf("Declared dimensions : %d . Found dimensions : %d\n\n", list_length(dimlist) , list_length(cur)) ;
 			}
-			cur = cur -> next ;
-			dimlist = dimlist -> next ;
+			while(cur != NULL && dimlist != NULL)
+			{
+				if(cur -> val != -1)
+				{
+					if(cur -> val >= dimlist -> val)
+					{
+						printf("Array index out of bounds for '%s' on line no : %d . \n", val , line_no) ;
+						printf("Actual size : %d . Found index : %d\n\n", dimlist -> val , cur -> val) ;
+					}
+				}
+				cur = cur -> next ;
+				dimlist = dimlist -> next ;
+			}
 		}
 		(yyval.i).ptr = res ;
 		(yyval.i).val = val ;
-		(yyval.i).type = res -> eletype ;
-		if(res -> type == STRUCT_T)
+		(yyval.i).type = res != NULL ? res -> eletype : -1 ;
+		if(res != NULL && res -> type == STRUCT_T)
 			(yyval.i).st = sdf_find_row(sdf , res -> eletype) -> st ;
 		else
 			(yyval.i).st = NULL ;
 	}
-#line 1753 "bison.tab.c" /* yacc.c:1646  */
+#line 1776 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 361 "bison.y" /* yacc.c:1646  */
+#line 384 "bison.y" /* yacc.c:1646  */
     { (yyval.l) = NULL ; }
-#line 1759 "bison.tab.c" /* yacc.c:1646  */
+#line 1782 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 362 "bison.y" /* yacc.c:1646  */
+#line 385 "bison.y" /* yacc.c:1646  */
     { 
 		if((yyvsp[-2].c).i_val < 0) 
 		{
@@ -1768,11 +1791,11 @@ yyreduce:
 		}
 		(yyval.l) = list_add((yyvsp[0].l) , (yyvsp[-2].c).i_val) ;
 	}
-#line 1772 "bison.tab.c" /* yacc.c:1646  */
+#line 1795 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 370 "bison.y" /* yacc.c:1646  */
+#line 393 "bison.y" /* yacc.c:1646  */
     {
 		if((yyvsp[-2].i).ptr -> eletype != T_INT)
 		{
@@ -1781,11 +1804,11 @@ yyreduce:
 		}
 		(yyval.l) = list_add((yyvsp[0].l) , -1) ;		
 	}
-#line 1785 "bison.tab.c" /* yacc.c:1646  */
+#line 1808 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 379 "bison.y" /* yacc.c:1646  */
+#line 402 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1 || is_struct((yyvsp[-2].e).type))
@@ -1795,11 +1818,11 @@ yyreduce:
 		}
 		(yyval.e).type = expr_t ; 
 	}
-#line 1799 "bison.tab.c" /* yacc.c:1646  */
+#line 1822 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 388 "bison.y" /* yacc.c:1646  */
+#line 411 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1 || is_struct((yyvsp[-2].e).type))
@@ -1809,17 +1832,17 @@ yyreduce:
 		}
 		(yyval.e).type = expr_t ; 
 	}
-#line 1813 "bison.tab.c" /* yacc.c:1646  */
+#line 1836 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 397 "bison.y" /* yacc.c:1646  */
+#line 420 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].e).type ; }
-#line 1819 "bison.tab.c" /* yacc.c:1646  */
+#line 1842 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 399 "bison.y" /* yacc.c:1646  */
+#line 422 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1 || is_struct((yyvsp[-2].e).type))
@@ -1829,11 +1852,11 @@ yyreduce:
 		}
 		(yyval.e).type = expr_t ; 
 	}
-#line 1833 "bison.tab.c" /* yacc.c:1646  */
+#line 1856 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 408 "bison.y" /* yacc.c:1646  */
+#line 431 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1 || is_struct((yyvsp[-2].e).type))
@@ -1843,65 +1866,65 @@ yyreduce:
 		}
 		(yyval.e).type = expr_t ; 
 	}
-#line 1847 "bison.tab.c" /* yacc.c:1646  */
+#line 1870 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 417 "bison.y" /* yacc.c:1646  */
+#line 440 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].e).type ; }
-#line 1853 "bison.tab.c" /* yacc.c:1646  */
+#line 1876 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 419 "bison.y" /* yacc.c:1646  */
+#line 442 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[-1].e).type ; }
-#line 1859 "bison.tab.c" /* yacc.c:1646  */
+#line 1882 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 420 "bison.y" /* yacc.c:1646  */
+#line 443 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].c).type ; }
-#line 1865 "bison.tab.c" /* yacc.c:1646  */
+#line 1888 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 421 "bison.y" /* yacc.c:1646  */
+#line 444 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].c).type ; }
-#line 1871 "bison.tab.c" /* yacc.c:1646  */
+#line 1894 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 422 "bison.y" /* yacc.c:1646  */
+#line 445 "bison.y" /* yacc.c:1646  */
     { (yyval.e).type = (yyvsp[0].c).type ; }
-#line 1877 "bison.tab.c" /* yacc.c:1646  */
+#line 1900 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 423 "bison.y" /* yacc.c:1646  */
+#line 446 "bison.y" /* yacc.c:1646  */
     {(yyval.e).type = (yyvsp[0].i).type ; }
-#line 1883 "bison.tab.c" /* yacc.c:1646  */
+#line 1906 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 426 "bison.y" /* yacc.c:1646  */
+#line 449 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_INT ; cur_dt = T_INT ;}
-#line 1889 "bison.tab.c" /* yacc.c:1646  */
+#line 1912 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 427 "bison.y" /* yacc.c:1646  */
+#line 450 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_FLOAT ; cur_dt = T_FLOAT ;}
-#line 1895 "bison.tab.c" /* yacc.c:1646  */
+#line 1918 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 428 "bison.y" /* yacc.c:1646  */
+#line 451 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_CHAR ; cur_dt = T_CHAR ;}
-#line 1901 "bison.tab.c" /* yacc.c:1646  */
+#line 1924 "bison.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1905 "bison.tab.c" /* yacc.c:1646  */
+#line 1928 "bison.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2129,11 +2152,11 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 431 "bison.y" /* yacc.c:1906  */
+#line 454 "bison.y" /* yacc.c:1906  */
 
 
 symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
-{
+{	
 	symbol_table_row* dup = (symbol_table_row*)	 malloc(sizeof(symbol_table_row)) ;
 	dup -> type = str -> type ;
 	dup -> eletype = str -> eletype ;
@@ -2155,8 +2178,9 @@ symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
 }
 
 char* datatype_to_string(symbol_table_row* str)
-{
-	char* res = (char*) malloc(100*sizeof(char)) ;	
+{	
+	char* res = (char*) malloc(100*sizeof(char)) ;
+	memset(res , 0 , 100*sizeof(char)) ;
 	if(str -> type == SIMPLE || str -> type == ARRAY)
 	{
 		if(str -> eletype == T_INT)
@@ -2175,6 +2199,7 @@ char* datatype_to_string(symbol_table_row* str)
 	else
 	{
 		struct_def_row* ret = sdf_find_row(sdf , str -> eletype) ;
+		printf("---%s\n", ret -> name);
 		res = strcat2(res , "struct ") ;
 		res = strcat2(res , ret -> name) ;		
 		list* cur = str -> dimlist ;

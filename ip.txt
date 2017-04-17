@@ -1,10 +1,16 @@
 struct ab
 {
-	int a , b ;
+	int a ;
+	int b ;
 } ;
 
-int func(int b , int c )
+int func2(int a[23][23])
 {
-	struct ab a[34] ;
-	a[2] = 43 ;
+	
+}
+
+int func(int b)
+{
+	int c[2] ;	
+	func2(c) ;
 }

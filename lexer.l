@@ -28,6 +28,24 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		yylval.d.type = T_STRUCT ;
 		return T_STRUCT ;
 		}
+{id}	{
+		char* copy = (char*) malloc(sizeof(strlen(yytext) + 1)) ;
+		strcpy(copy , yytext) ;
+		yylval.i.val = copy ;
+		yylval.i.type = cur_dt ;
+		// printf("Lex : %s detected\n" , yytext) ; 
+		return ID ;
+		}
+[+-]?[0-9]*"."[0-9]+ {
+			yylval.c.type = V_INT ;
+			yylval.c.f_val = atof(yytext) ;
+			return V_FLOAT ;
+	   }		
+[+-]?[0-9]+ {
+			yylval.c.type = V_INT ;
+			yylval.c.i_val = atoi(yytext) ;
+			return V_INT ;
+	   }
 "," 	{
 		// printf("Lex : , detected\n") ; 
 		return ',' ; 
@@ -80,24 +98,6 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		// printf("Lex : * detected\n") ; 
 		return '-' ; 		
 		}
-{id}	{
-		char* copy = (char*) malloc(sizeof(strlen(yytext) + 1)) ;
-		strcpy(copy , yytext) ;
-		yylval.i.val = copy ;
-		yylval.i.type = cur_dt ;
-		// printf("Lex : %s detected\n" , yytext) ; 
-		return ID ;
-		}
-[0-9]*"."[0-9]+ {
-			yylval.c.type = V_INT ;
-			yylval.c.f_val = atof(yytext) ;
-			return V_FLOAT ;
-	   }		
-[0-9]+ {
-			yylval.c.type = V_INT ;
-			yylval.c.i_val = atoi(yytext) ;
-			return V_INT ;
-	   }
 "'"[a-zA-Z0-9_]"'" {
 			yylval.c.type = V_CHAR ;
 			yylval.c.c_val = yytext[1] ;
@@ -129,16 +129,6 @@ int is_array(int t)
 	return t == ARRAY ;
 }
 
-char* to_str_eletype(int type)
-{
-	if(type == T_INT)
-		return "int" ;
-	if(type == T_FLOAT)
-		return "float" ;
-	if(type == T_CHAR)
-		return "char" ;
-	return "struct" ;
-}
 
 int is_char(int t)
 {
@@ -158,6 +148,19 @@ int is_float(int t)
 int is_struct(int t)
 {
 	return !is_int(t) && !is_char(t) && !is_float(t) ;
+}
+
+char* to_str_eletype(int type)
+{
+	if(is_int(type))
+		return "int" ;
+	if(is_float(type))
+		return "float" ;
+	if(is_char(type))
+		return "char" ;
+	else if (type != -1)
+		return "struct" ;
+	return "unknown" ;
 }
 
 int expr_type(int t1 , int t2)
@@ -200,8 +203,8 @@ int main()
 	// sdf_print(sdf) ;
 // 	for(i = 0 ; i < 80 ; i++)
 // 		printf("-") ;	
-// 	printf("\n\nPrinting function defenitions table:\n\n") ;
-// 	ft_print(ft) ;
+	// printf("\n\nPrinting function defenitions table:\n\n") ;
+	// ft_print(ft) ;
 // 	for(i = 0 ; i < 80 ; i++)
 // 		printf("-") ;	
 // 	printf("\n\nParse successful\n");

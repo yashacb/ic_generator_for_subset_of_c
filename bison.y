@@ -6,6 +6,9 @@
 #include "func.c"
 #include "mystring.c"
 
+#define RED   "\x1B[31m"
+#define RESET "\x1B[0m"
+
 symbol_table_row* resolve(symbol_table_row* str , list* dimlist) ;
 char* datatype_to_string(symbol_table_row* str) ;
 
@@ -43,7 +46,7 @@ typedef struct decl{
 }decl ;
 
 typedef struct id{
-	int type ;
+	int type ; // this contains the element type and not if it is SMIPLE , ARRAY or STRUCT ! This you need to get from ptr !
 	char* val ;
 	symbol_table_row* ptr ;
 	symbol_table* st ;
@@ -108,6 +111,7 @@ typedef struct constant{
 %type <f> FUNC_CALL
 %type <np> PARAM_LIST
 %type <np> ARG_LIST
+%type <np> ARGS_LIST
 
 %start S
 
@@ -140,10 +144,12 @@ FUNC_DEF : TYPE ID {
 		$$ = NULL ; }
 	;
 PARAM_LIST : TYPE VAR {
-		$2.ptr -> eletype = $1.type ;
+		if($2.ptr != NULL)
+			$2.ptr -> eletype = $1.type ;
 	} ',' PARAM_LIST { $$ = 1 +  $5 ; }
 	| TYPE VAR {
-		$2.ptr -> eletype = $1.type ;
+		if($2.ptr != NULL)
+			$2.ptr -> eletype = $1.type ;
 		$$ = 1 ;
 	}
 	| T_STRUCT ID ID SVAR_CHECK ARR_LIST { 
@@ -160,21 +166,36 @@ FUNC_CALL : ID {
 		call_func_ptr = ft_find(ft , $1.val) ;		
 		if(call_func_ptr == NULL)
 		{
-			printf("Unknown function '%s' on line_no : %d .\n", $1.val , line_no) ;
+			printf("Unknown function '%s' on line_no : %d .\n\n", $1.val , line_no) ;
 		}
-	}'(' ARG_LIST ')' ';' { $$ = NULL ;}
+	}'(' ARGS_LIST ')' ';' { 
+		int called_params = $4 ;
+		if(call_func_ptr != NULL)
+		{
+			if(call_func_ptr -> num_param != called_params + 1 )
+			{
+				printf("Error incorrect number of arguments for function '%s' on line no : %d .\n" , call_func_ptr -> name , line_no) ;
+				printf("Expected : %d , but found : %d . \n\n", call_func_ptr -> num_param , called_params + 1) ;
+			}
+		}
+		$$ = NULL ;
+	}
+	;
+ARGS_LIST : ARG_LIST {$$ = $1 ;}
+	| {$$ = -1 ; // don't change this :p
+	 }
 	;
 ARG_LIST : ARG_LIST ',' LVALUE { 
 		$$ = $1 + 1 ; 
 		if(call_func_ptr != NULL)
 		{
 			int num_param = call_func_ptr -> num_param ;
-			symbol_table_row* expected = ft_get_param(call_func_ptr , num_param - 1 - $$) ;
-			symbol_table_row* found = resolve($3.ptr , $3.dimlist) ;
+			symbol_table_row* expected = ft_get_param(call_func_ptr , num_param - 1 - $$) ;			
+			symbol_table_row* found = resolve($3.ptr , $3.dimlist) ;			
 			if(st_compare(expected , found) != 1)
 			{
-				printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ , call_func_ptr -> name , line_no) ;
-				printf("Expected %s , but found %s\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
+				printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
+				printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
 			}
 		}
 	}
@@ -187,7 +208,7 @@ ARG_LIST : ARG_LIST ',' LVALUE {
 			symbol_table_row* found = resolve($1.ptr , $1.dimlist) ;
 			if(st_compare(expected , found) != 1)
 			{
-				printf("Incorrect argument type for function '%s' on line no : %d\n", call_func_ptr -> name , line_no) ;
+				printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
 				printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
 			}
 		}
@@ -249,7 +270,7 @@ SVAR_CHECK : {
 			{
 				printf("Unknown type '%s' for variable '%s' on line no : %d\n\n" , $<i>-1.val , $<i>0.val , line_no) ;
 			}
-			$$.type = ind ;
+			$$.type = ind ; // this is eletype !
 		}
 	}
 	;
@@ -294,18 +315,22 @@ DIM_LIST : '[' V_INT ']' {
 	}
 	; 
 
-ASG : LVALUE '=' EXPR ';' { 
+ASG : LVALUE '=' EXPR ';' {
+		symbol_table_row* resolved = resolve($1.ptr , $1.dimlist) ;		
+		if(resolved != NULL && resolved -> type == ARRAY)
+		{
+			printf("Cannot assign to array '%s' on line no : %d\n\n", $1.val , line_no) ;
+		}
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
 		{
 			printf("Assignment of incompatible types on line no : %d .\n", line_no) ;
-			printf("Assigning '%s' to '%s' \n\n", datatype_to_string(resolve($1.ptr , $1.dimlist)) 
-				, to_str_eletype($3.type)) ;
+			printf("Assigning '%s' to '%s' \n\n", to_str_eletype($3.type) , datatype_to_string(resolve($1.ptr , $1.dimlist))) ;
 		}
 		$$.type = $1.type ; 
 	}
 	;
-LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
+LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {		
 		$$.type = $4.type ;
 		$$.ptr = $4.ptr ;
 		$$.st = $4.st ;
@@ -318,7 +343,7 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 		{
 			cur = cur -> next ;
 			$$.val = strcat2($$.val , "[]") ;
-		}
+		}	
 	}
 	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ; } LVALUE_CHECK {		
 		$$.type = $6.type ;
@@ -341,7 +366,7 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 		}
 	}
 	;
-LVALUE_CHECK : {
+LVALUE_CHECK : {		
 		char* val = $<i>-2.val ;
 		list* cur = $<l>-1 ;
 		symbol_table* cur_st = $<i>0.st ;
@@ -349,6 +374,7 @@ LVALUE_CHECK : {
 		if(res == NULL)
 		{
 			$$.type = -1 ;
+			printf("'%s' is not declared in current scope on line no : %d\n\n", val , line_no) ;
 		}
 		else
 		{
@@ -376,7 +402,7 @@ LVALUE_CHECK : {
 		$$.val = val ;
 		$$.type = res != NULL ? res -> eletype : -1 ;
 		if(res != NULL && res -> type == STRUCT_T)
-			$$.st = sdf_find_row(sdf , res -> eletype) -> st ;
+			$$.st = sdf_find_row(sdf , res -> eletype) -> st ;			
 		else
 			$$.st = NULL ;
 	}
@@ -385,18 +411,17 @@ ARR_LIST : { $$ = NULL ; }
 	| '[' V_INT ']' ARR_LIST { 
 		if($2.i_val < 0) 
 		{
-			printf("Array index out of bounds on line no : %d\n", line_no) ;
-			exit(0) ;
+			printf("Array index out of bounds on line no : %d\n\n", line_no) ;
 		}
-		$$ = list_add($4 , $2.i_val) ;
+		else
+			$$ = list_add($4 , $2.i_val) ;
 	}
 	| '[' LVALUE  ']' ARR_LIST {
-		if($2.ptr -> eletype != T_INT)
+		if($2.ptr == NULL || $2.ptr -> eletype != T_INT)
 		{
-			printf("Array index is not an integer on line no : %d\n", line_no) ;
-			exit(0) ;
+			printf("Array index '%s' is not an integer on line no : %d\n\n", $2.val , line_no) ;
 		}
-		$$ = list_add($4 , -1) ;		
+		$$ = list_add($4 , -1) ;
 	}
 	;
 EXPR : EXPR '+' TERM { 
@@ -412,8 +437,7 @@ EXPR : EXPR '+' TERM {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1 || is_struct($1.type))
 		{
-			printf("Invalid operands for \'-\' on line_no : %d\n", line_no) ;
-			exit(0) ;
+			printf("Invalid operands for \'-\' on line_no : %d\n\n", line_no) ;
 		}
 		$$.type = expr_t ; 
 	}
@@ -423,8 +447,7 @@ TERM : TERM '*' FACTOR {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1 || is_struct($1.type))
 		{
-			printf("Invalid operands for \'*\' on line_no : %d\n", line_no) ;
-			exit(0) ;
+			printf("Invalid operands for \'*\' on line_no : %d\n\n", line_no) ;
 		}
 		$$.type = expr_t ; 
 	}
@@ -432,8 +455,7 @@ TERM : TERM '*' FACTOR {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1 || is_struct($1.type))
 		{
-			printf("Invalid operands for \'/\' on line_no : %d\n", line_no) ;
-			exit(0) ;
+			printf("Invalid operands for \'/\' on line_no : %d\n\n", line_no) ;
 		}
 		$$.type = expr_t ; 
 	}
@@ -455,6 +477,8 @@ TYPE : T_INT { $$.type = T_INT ; cur_dt = T_INT ;}
 
 symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
 {	
+	if(str == NULL)
+		return NULL ;
 	symbol_table_row* dup = (symbol_table_row*)	 malloc(sizeof(symbol_table_row)) ;
 	dup -> type = str -> type ;
 	dup -> eletype = str -> eletype ;
@@ -464,7 +488,10 @@ symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
 	if(list_length(dimlist) == list_length(str -> dimlist))
 	{
 		dup -> dimlist = NULL ;
-		dup -> type = SIMPLE ;
+		if(is_struct(dup -> eletype))
+			dup -> type = STRUCT_T ;
+		else
+			dup -> type = SIMPLE ;
 		return dup ;
 	}
 	while(dimlist != NULL && dup -> dimlist != NULL)
@@ -477,6 +504,8 @@ symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
 
 char* datatype_to_string(symbol_table_row* str)
 {	
+	if(str == NULL)
+		return "(unknown)" ;
 	char* res = (char*) malloc(100*sizeof(char)) ;
 	memset(res , 0 , 100*sizeof(char)) ;
 	if(str -> type == SIMPLE || str -> type == ARRAY)

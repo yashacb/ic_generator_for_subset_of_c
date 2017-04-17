@@ -17,7 +17,7 @@ typedef struct func_table{
 
 symbol_table_row* ft_get_param(func_table_row* ft , int ind)
 {
-	if(ind >= ft -> num_param || ft -> param_list -> list == NULL)
+	if(ind < 0 || ind >= ft -> num_param || ft -> param_list -> list == NULL)
 		return NULL ;
 	symbol_table_row* cur = ft -> param_list -> list ;
 	int i = 0 ;
@@ -31,6 +31,8 @@ symbol_table_row* ft_get_param(func_table_row* ft , int ind)
 
 func_table_row* ft_find(func_table* ft , char* name)
 {
+	if(ft == NULL)
+		return NULL ;
 	func_table_row* cur = ft -> list ;
 	while(cur != NULL)
 	{
@@ -48,9 +50,10 @@ func_table* ft_new(func_table_row* list)
 	new -> list = list ;
 }
 
-func_table_row* ft_add(func_table* ft , char* name 
-	, symbol_table* param_list , symbol_table* local_list , int res_type , int np)
+func_table_row* ft_add(func_table* ft , char* name , symbol_table* param_list , symbol_table* local_list , int res_type , int np)
 {
+	if(ft == NULL)
+		return NULL ;
 	func_table_row* new = (func_table_row*) malloc(sizeof(func_table_row)) ;
 	new -> param_list = param_list ;
 	new -> local_list = local_list ;

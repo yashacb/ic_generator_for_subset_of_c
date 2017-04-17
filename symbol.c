@@ -45,6 +45,8 @@ symbol_table_row* st_get_symbol(symbol_table* st , int ind)
 
 void st_print(symbol_table* st)
 {
+	if(st == NULL)
+		return ;
 	symbol_table_row* cur = st -> list ;
 	printf("[") ;
 	while(cur != NULL)
@@ -101,9 +103,10 @@ symbol_table_row* st_find_strict(symbol_table* st , char* name , int scope)
 	return res ;
 }
 
-symbol_table_row* st_add(symbol_table* st , char* name , int type , 
-	int eletype , list* dimlist , int scope)
+symbol_table_row* st_add(symbol_table* st , char* name , int type , int eletype , list* dimlist , int scope)
 {
+	if(st == NULL)
+		return NULL ;
 	symbol_table_row* new_row = (symbol_table_row*) malloc(sizeof(symbol_table_row)) ;
 	new_row -> name = name ;
 	new_row -> type = type ;
@@ -137,7 +140,7 @@ int st_size(symbol_table* st)
 int st_compare(symbol_table_row* a , symbol_table_row* b)
 {
 	if( a == NULL || b == NULL)
-		return a == NULL && b == NULL ;
+		return 1 ;
 	if(a -> type == b -> type && a -> eletype == b -> eletype && 
 		list_length(a -> dimlist) == list_length(b -> dimlist))
 		return 1 ;

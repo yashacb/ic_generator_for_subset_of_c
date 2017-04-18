@@ -12,6 +12,6 @@ struct ab{
 
 int func()
 {
-	struct ab a[3] ;
-	a[0].n[0].a[0] = 2 ;
+	struct ab a[2];
+	a[1].c = 2.3 ;
 }

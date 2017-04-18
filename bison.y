@@ -337,6 +337,7 @@ ASG : LVALUE '=' EXPR ';' {
 			printf("Cannot assign to array '%s' on line no : %d\n\n", $1.val , line_no) ;
 			parse_error = 1 ;
 		}
+		char* lname = get_first($1.val) ;
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1)
 		{
@@ -350,16 +351,16 @@ ASG : LVALUE '=' EXPR ';' {
 			if($1.offset != NULL)	
 			{
 				if($3.constant == 0)
-					sprintf(code , "%s[%s] = %s" , $1.ptr -> name , $1.offset -> name , $3.temp -> name) ;
+					sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.temp -> name) ;
 				else
-					sprintf(code , "%s[%s] = %s" , $1.ptr -> name , $1.offset -> name , $3.val) ;
+					sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.val) ;
 			}
 			else
 			{
 				if($3.constant == 0)
-					sprintf(code , "%s = %s" , $1.ptr -> name , $3.temp -> name) ;
+					sprintf(code , "%s = %s" , lname , $3.temp -> name) ;
 				else
-					sprintf(code , "%s = %s" , $1.ptr -> name , $3.val) ;
+					sprintf(code , "%s = %s" , lname , $3.val) ;
 			}
 			ic = ic_add(ic , NOT_GOTO , code , -1) ;
 		}

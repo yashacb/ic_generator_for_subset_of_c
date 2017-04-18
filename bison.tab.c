@@ -527,9 +527,9 @@ static const yytype_uint16 yyrline[] =
      159,   164,   168,   172,   174,   174,   195,   196,   199,   214,
      230,   231,   235,   231,   238,   239,   240,   241,   243,   244,
      246,   247,   247,   249,   249,   258,   260,   265,   271,   292,
-     295,   299,   306,   315,   326,   329,   333,   369,   369,   389,
-     389,   421,   467,   468,   489,   508,   527,   534,   560,   586,
-     593,   599,   607,   614,   621,   628,   629,   630
+     295,   299,   306,   315,   326,   329,   333,   370,   370,   390,
+     390,   422,   468,   469,   490,   509,   528,   535,   561,   587,
+     594,   600,   608,   615,   622,   629,   630,   631
 };
 #endif
 
@@ -1720,6 +1720,7 @@ yyreduce:
 			printf("Cannot assign to array '%s' on line no : %d\n\n", (yyvsp[-3].i).val , line_no) ;
 			parse_error = 1 ;
 		}
+		char* lname = get_first((yyvsp[-3].i).val) ;
 		int expr_t = expr_type((yyvsp[-3].i).type , (yyvsp[-1].e).type) ;
 		if(expr_t == -1)
 		{
@@ -1733,32 +1734,32 @@ yyreduce:
 			if((yyvsp[-3].i).offset != NULL)	
 			{
 				if((yyvsp[-1].e).constant == 0)
-					sprintf(code , "%s[%s] = %s" , (yyvsp[-3].i).ptr -> name , (yyvsp[-3].i).offset -> name , (yyvsp[-1].e).temp -> name) ;
+					sprintf(code , "%s[%s] = %s" , lname , (yyvsp[-3].i).offset -> name , (yyvsp[-1].e).temp -> name) ;
 				else
-					sprintf(code , "%s[%s] = %s" , (yyvsp[-3].i).ptr -> name , (yyvsp[-3].i).offset -> name , (yyvsp[-1].e).val) ;
+					sprintf(code , "%s[%s] = %s" , lname , (yyvsp[-3].i).offset -> name , (yyvsp[-1].e).val) ;
 			}
 			else
 			{
 				if((yyvsp[-1].e).constant == 0)
-					sprintf(code , "%s = %s" , (yyvsp[-3].i).ptr -> name , (yyvsp[-1].e).temp -> name) ;
+					sprintf(code , "%s = %s" , lname , (yyvsp[-1].e).temp -> name) ;
 				else
-					sprintf(code , "%s = %s" , (yyvsp[-3].i).ptr -> name , (yyvsp[-1].e).val) ;
+					sprintf(code , "%s = %s" , lname , (yyvsp[-1].e).val) ;
 			}
 			ic = ic_add(ic , NOT_GOTO , code , -1) ;
 		}
 		(yyval.c).type = (yyvsp[-3].i).type ;
 	}
-#line 1752 "bison.tab.c" /* yacc.c:1646  */
+#line 1753 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 369 "bison.y" /* yacc.c:1646  */
+#line 370 "bison.y" /* yacc.c:1646  */
     { (yyval.i).st = st ; }
-#line 1758 "bison.tab.c" /* yacc.c:1646  */
+#line 1759 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 369 "bison.y" /* yacc.c:1646  */
+#line 370 "bison.y" /* yacc.c:1646  */
     {		
 		(yyval.i).type = (yyvsp[0].i).type ;
 		(yyval.i).ptr = (yyvsp[0].i).ptr ;
@@ -1779,17 +1780,17 @@ yyreduce:
 			(yyval.i).val = strcat2((yyval.i).val , "[]") ;
 		}
 	}
-#line 1783 "bison.tab.c" /* yacc.c:1646  */
+#line 1784 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 389 "bison.y" /* yacc.c:1646  */
+#line 390 "bison.y" /* yacc.c:1646  */
     { (yyval.i).st = (yyvsp[-3].i).st ; }
-#line 1789 "bison.tab.c" /* yacc.c:1646  */
+#line 1790 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 389 "bison.y" /* yacc.c:1646  */
+#line 390 "bison.y" /* yacc.c:1646  */
     {
 		(yyval.i).type = (yyvsp[0].i).type ;
 		(yyval.i).ptr = (yyvsp[0].i).ptr ;
@@ -1821,11 +1822,11 @@ yyreduce:
 			(yyval.i).type = -1 ;
 		}
 	}
-#line 1825 "bison.tab.c" /* yacc.c:1646  */
+#line 1826 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 421 "bison.y" /* yacc.c:1646  */
+#line 422 "bison.y" /* yacc.c:1646  */
     {	
 		char* val = (yyvsp[(-2) - (0)].i).val ;
 		list* cur = arr_to_list((yyvsp[(-1) - (0)].al)) ;
@@ -1871,17 +1872,17 @@ yyreduce:
 		else
 			(yyval.i).st = NULL ;
 	}
-#line 1875 "bison.tab.c" /* yacc.c:1646  */
+#line 1876 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 467 "bison.y" /* yacc.c:1646  */
+#line 468 "bison.y" /* yacc.c:1646  */
     { (yyval.al) = NULL ; cur_arr_index = 0 ;}
-#line 1881 "bison.tab.c" /* yacc.c:1646  */
+#line 1882 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 468 "bison.y" /* yacc.c:1646  */
+#line 469 "bison.y" /* yacc.c:1646  */
     {
 		if((yyvsp[-2].e).constant != 0 && (yyvsp[-2].e).constant != V_INT)
 		{
@@ -1902,11 +1903,11 @@ yyreduce:
 		(yyval.al) -> next = (yyvsp[0].al) ;
 		cur_arr_index ++ ;
 	}
-#line 1906 "bison.tab.c" /* yacc.c:1646  */
+#line 1907 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 489 "bison.y" /* yacc.c:1646  */
+#line 490 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1 || is_struct((yyvsp[-2].e).type))
@@ -1926,11 +1927,11 @@ yyreduce:
 		}
 		(yyval.e).type = expr_t ; 
 	}
-#line 1930 "bison.tab.c" /* yacc.c:1646  */
+#line 1931 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 508 "bison.y" /* yacc.c:1646  */
+#line 509 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1 || is_struct((yyvsp[-2].e).type))
@@ -1950,22 +1951,22 @@ yyreduce:
 		}
 		(yyval.e).type = expr_t ; 
 	}
-#line 1954 "bison.tab.c" /* yacc.c:1646  */
+#line 1955 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 527 "bison.y" /* yacc.c:1646  */
+#line 528 "bison.y" /* yacc.c:1646  */
     { 
 		(yyval.e).type = (yyvsp[0].e).type ; 
 		(yyval.e).temp = (yyvsp[0].e).temp ;
 		(yyval.e).constant = (yyvsp[0].e).constant ;
 		(yyval.e).val = (yyvsp[0].e).val ;
 	}
-#line 1965 "bison.tab.c" /* yacc.c:1646  */
+#line 1966 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 534 "bison.y" /* yacc.c:1646  */
+#line 535 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1 || is_struct((yyvsp[-2].e).type))
@@ -1992,11 +1993,11 @@ yyreduce:
 		code = strcat2(code , right) ;
 		ic = ic_add(ic , NOT_GOTO , code , -1) ; 
 	}
-#line 1996 "bison.tab.c" /* yacc.c:1646  */
+#line 1997 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 560 "bison.y" /* yacc.c:1646  */
+#line 561 "bison.y" /* yacc.c:1646  */
     { 
 		int expr_t = expr_type((yyvsp[-2].e).type , (yyvsp[0].e).type) ;
 		if(expr_t == -1 || is_struct((yyvsp[-2].e).type))
@@ -2023,33 +2024,33 @@ yyreduce:
 		code = strcat2(code , right) ;
 		ic = ic_add(ic , NOT_GOTO , code , -1) ; 
 	}
-#line 2027 "bison.tab.c" /* yacc.c:1646  */
+#line 2028 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 586 "bison.y" /* yacc.c:1646  */
+#line 587 "bison.y" /* yacc.c:1646  */
     { 
 		(yyval.e).type = (yyvsp[0].e).type ; 
 		(yyval.e).temp = (yyvsp[0].e).temp ;
 		(yyval.e).constant = (yyvsp[0].e).constant ;
 		(yyval.e).val = (yyvsp[0].e).val ;
 	}
-#line 2038 "bison.tab.c" /* yacc.c:1646  */
+#line 2039 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 593 "bison.y" /* yacc.c:1646  */
+#line 594 "bison.y" /* yacc.c:1646  */
     { 
 		(yyval.e).type = (yyvsp[-1].e).type ; 
 		(yyval.e).temp = (yyvsp[-1].e).temp ; 
 		(yyval.e).constant = (yyvsp[-1].e).constant ;
 		(yyval.e).val = (yyvsp[-1].e).val ;
 	}
-#line 2049 "bison.tab.c" /* yacc.c:1646  */
+#line 2050 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 599 "bison.y" /* yacc.c:1646  */
+#line 600 "bison.y" /* yacc.c:1646  */
     { 
 		(yyval.e).type = (yyvsp[0].c).type ; 
 		(yyval.e).temp = NULL ;
@@ -2058,11 +2059,11 @@ yyreduce:
 		sprintf(val , "%d" , (yyvsp[0].c).i_val) ;
 		(yyval.e).val = val ;
 	}
-#line 2062 "bison.tab.c" /* yacc.c:1646  */
+#line 2063 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 607 "bison.y" /* yacc.c:1646  */
+#line 608 "bison.y" /* yacc.c:1646  */
     { 
 		(yyval.e).constant = V_FLOAT ;
 		(yyval.e).type = (yyvsp[0].c).type ; 
@@ -2070,11 +2071,11 @@ yyreduce:
 		sprintf(val , "%f" , (yyvsp[0].c).f_val) ;
 		(yyval.e).val = val ;
 	}
-#line 2074 "bison.tab.c" /* yacc.c:1646  */
+#line 2075 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 614 "bison.y" /* yacc.c:1646  */
+#line 615 "bison.y" /* yacc.c:1646  */
     { 
 		(yyval.e).constant = V_CHAR ;
 		(yyval.e).type = (yyvsp[0].c).type ; 
@@ -2082,40 +2083,40 @@ yyreduce:
 		sprintf(val , "%c" , (yyvsp[0].c).c_val) ;
 		(yyval.e).val = val ;
 	}
-#line 2086 "bison.tab.c" /* yacc.c:1646  */
+#line 2087 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 621 "bison.y" /* yacc.c:1646  */
+#line 622 "bison.y" /* yacc.c:1646  */
     {
 		(yyval.e).type = (yyvsp[0].i).type ; 
 		(yyval.e).temp = (yyvsp[0].i).ptr ;
 		(yyval.e).constant = 0 ;
 		(yyval.e).val = "" ;
 	}
-#line 2097 "bison.tab.c" /* yacc.c:1646  */
+#line 2098 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 628 "bison.y" /* yacc.c:1646  */
+#line 629 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_INT ; cur_dt = T_INT ;}
-#line 2103 "bison.tab.c" /* yacc.c:1646  */
+#line 2104 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 629 "bison.y" /* yacc.c:1646  */
+#line 630 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_FLOAT ; cur_dt = T_FLOAT ;}
-#line 2109 "bison.tab.c" /* yacc.c:1646  */
+#line 2110 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 630 "bison.y" /* yacc.c:1646  */
+#line 631 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_CHAR ; cur_dt = T_CHAR ;}
-#line 2115 "bison.tab.c" /* yacc.c:1646  */
+#line 2116 "bison.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2119 "bison.tab.c" /* yacc.c:1646  */
+#line 2120 "bison.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2343,7 +2344,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 632 "bison.y" /* yacc.c:1906  */
+#line 633 "bison.y" /* yacc.c:1906  */
 
 symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
 {	

@@ -1,16 +1,17 @@
-struct ab
-{
-	int a ;
-	int b ;
+
+struct node{
+	int a[2] ;
 } ;
 
-int func2(int a[23][23])
-{
-	
-}
+struct ab{
+	int a[3] ;
+	int b ;
+	struct node n[2] ;
+	float c ;
+} ;
 
-int func(int b)
+int func()
 {
-	int c[2] ;	
-	func2(c) ;
+	struct ab a[3] ;
+	a[0].n[0].a[0] = 2 ;
 }

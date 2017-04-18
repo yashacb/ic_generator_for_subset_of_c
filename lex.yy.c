@@ -890,12 +890,13 @@ YY_RULE_SETUP
 {
 			yylval.c.type = V_INT ;
 			yylval.c.i_val = atoi(yytext) ;
+			// printf("%s\n", yytext) ;
 			return V_INT ;
 	   }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 49 "lexer.l"
+#line 50 "lexer.l"
 {
 		// printf("Lex : , detected\n") ; 
 		return ',' ; 
@@ -903,7 +904,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 53 "lexer.l"
+#line 54 "lexer.l"
 {
 		// printf("Lex : ; detected\n") ; 
 		return ';' ; 
@@ -911,7 +912,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 57 "lexer.l"
+#line 58 "lexer.l"
 {
 		// printf("Lex : [ detected\n") ; 
 		return '[' ; 
@@ -919,7 +920,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 61 "lexer.l"
+#line 62 "lexer.l"
 {
 		// printf("Lex : ] detected\n") ; 
 		return ']' ; 
@@ -927,7 +928,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 65 "lexer.l"
+#line 66 "lexer.l"
 {
 		// printf("Lex : () detected\n") ; 
 		return '(' ; 
@@ -935,7 +936,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 69 "lexer.l"
+#line 70 "lexer.l"
 {
 		// printf("Lex : ) detected\n") ; 
 		return ')' ; 
@@ -943,7 +944,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 73 "lexer.l"
+#line 74 "lexer.l"
 {
 		// printf("Lex : { detected\n") ; 
 		return '{' ; 
@@ -951,7 +952,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 77 "lexer.l"
+#line 78 "lexer.l"
 {
 		// printf("Lex : } detected\n") ; 
 		return '}' ; 
@@ -959,7 +960,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 81 "lexer.l"
+#line 82 "lexer.l"
 {
 		// printf("Lex : = detected\n") ; 
 		return '=' ; 
@@ -967,7 +968,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 85 "lexer.l"
+#line 86 "lexer.l"
 {
 		// printf("Lex : * detected\n") ; 
 		return '*' ; 
@@ -975,7 +976,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 89 "lexer.l"
+#line 90 "lexer.l"
 {
 		// printf("Lex : * detected\n") ; 
 		return '+' ; 
@@ -983,7 +984,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 93 "lexer.l"
+#line 94 "lexer.l"
 {
 		// printf("Lex : * detected\n") ; 
 		return '/' ; 
@@ -991,7 +992,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 97 "lexer.l"
+#line 98 "lexer.l"
 {
 		// printf("Lex : * detected\n") ; 
 		return '-' ; 		
@@ -999,7 +1000,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 101 "lexer.l"
+#line 102 "lexer.l"
 {
 			yylval.c.type = V_CHAR ;
 			yylval.c.c_val = yytext[1] ;
@@ -1008,7 +1009,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 106 "lexer.l"
+#line 107 "lexer.l"
 {
 		// printf("Lex : . detected\n") ; 
 		return '.' ; 
@@ -1017,20 +1018,20 @@ YY_RULE_SETUP
 case 23:
 /* rule 23 can match eol */
 YY_RULE_SETUP
-#line 110 "lexer.l"
+#line 111 "lexer.l"
 { line_no++ ;}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 111 "lexer.l"
+#line 112 "lexer.l"
 ;
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 113 "lexer.l"
+#line 114 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1033 "lex.yy.c"
+#line 1034 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2031,7 +2032,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 113 "lexer.l"
+#line 114 "lexer.l"
 
 
 
@@ -2117,6 +2118,8 @@ int main()
 	st = sm_find(sm , cur_scope) ;
 	ft = ft_new(NULL) ;
 	yyparse() ;	
+	if(!parse_error)
+		ic_print(ic) ;
 // 	sm_print_table(sm) ;
 // 	printf("\n\n");
 // 	for(i = 0 ; i < 80 ; i++)

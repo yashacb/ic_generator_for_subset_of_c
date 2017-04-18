@@ -146,3 +146,14 @@ int st_compare(symbol_table_row* a , symbol_table_row* b)
 		return 1 ;
 	return 0 ;
 }
+
+int temp_num = 0 ;
+
+symbol_table_row* st_new_temp(symbol_table* st , int eletype , int scope)
+{
+	char* name = dupstr("$temp") ;
+	char num[10] ;
+	sprintf(num , "%d" , temp_num++) ;
+	name = strcat2(name , num) ;
+	return st_add(st , name , SIMPLE , eletype , NULL , scope) ;
+}

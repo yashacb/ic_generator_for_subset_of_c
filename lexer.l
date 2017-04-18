@@ -44,6 +44,7 @@ id [a-zA-Z][a-zA-Z0-9_]*
 [+-]?[0-9]+ {
 			yylval.c.type = V_INT ;
 			yylval.c.i_val = atoi(yytext) ;
+			// printf("%s\n", yytext) ;
 			return V_INT ;
 	   }
 "," 	{
@@ -195,6 +196,8 @@ int main()
 	st = sm_find(sm , cur_scope) ;
 	ft = ft_new(NULL) ;
 	yyparse() ;	
+	if(!parse_error)
+		ic_print(ic) ;
 // 	sm_print_table(sm) ;
 // 	printf("\n\n");
 // 	for(i = 0 ; i < 80 ; i++)

@@ -529,7 +529,7 @@ static const yytype_uint16 yyrline[] =
      246,   247,   247,   249,   249,   258,   260,   265,   271,   292,
      295,   299,   306,   315,   326,   329,   333,   370,   370,   390,
      390,   422,   468,   469,   490,   509,   528,   535,   561,   587,
-     594,   600,   608,   615,   622,   629,   630,   631
+     594,   600,   608,   615,   622,   638,   639,   640
 };
 #endif
 
@@ -2093,30 +2093,39 @@ yyreduce:
 		(yyval.e).temp = (yyvsp[0].i).ptr ;
 		(yyval.e).constant = 0 ;
 		(yyval.e).val = "" ;
+
+		if((yyvsp[0].i).offset != NULL)
+		{			
+			symbol_table_row* temp = st_new_temp(st , (yyvsp[0].i).type , cur_scope) ;
+			char code[100] ;		
+			sprintf(code , "%s = %s[%s]" , temp -> name , get_first((yyvsp[0].i).val) , (yyvsp[0].i).offset -> name) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;
+			(yyval.e).temp = temp ;
+		}
 	}
-#line 2098 "bison.tab.c" /* yacc.c:1646  */
+#line 2107 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 629 "bison.y" /* yacc.c:1646  */
+#line 638 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_INT ; cur_dt = T_INT ;}
-#line 2104 "bison.tab.c" /* yacc.c:1646  */
+#line 2113 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 630 "bison.y" /* yacc.c:1646  */
+#line 639 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_FLOAT ; cur_dt = T_FLOAT ;}
-#line 2110 "bison.tab.c" /* yacc.c:1646  */
+#line 2119 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 631 "bison.y" /* yacc.c:1646  */
+#line 640 "bison.y" /* yacc.c:1646  */
     { (yyval.d).type = T_CHAR ; cur_dt = T_CHAR ;}
-#line 2116 "bison.tab.c" /* yacc.c:1646  */
+#line 2125 "bison.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2120 "bison.tab.c" /* yacc.c:1646  */
+#line 2129 "bison.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2344,7 +2353,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 633 "bison.y" /* yacc.c:1906  */
+#line 642 "bison.y" /* yacc.c:1906  */
 
 symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
 {	
@@ -2437,7 +2446,7 @@ list* arr_to_list(arr_list* al)
 	return list_reverse(ret) ;
 }
 
-symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name)
+symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name) // offset of element eletype within the structure . (reverse from actual order)
 {
 	struct_def_row* sdfr = sdf_find_row(sdf , eletype) ;
 	if(sdfr == NULL)
@@ -2451,6 +2460,17 @@ symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name)
 			return offset ;
 		}
 		int size = get_size(cur -> eletype) ;
+		if(cur -> dimlist != NULL)
+		{
+			int ttt = 1 ;
+			list* d = cur -> dimlist ;
+			while(d != NULL)
+			{
+				ttt *= d -> val ;
+				d = d -> next ;
+			}
+			size = size * ttt ;
+		}
 		if(offset == NULL)
 		{
 			offset = st_new_temp(st , T_INT , cur_scope) ;

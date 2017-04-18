@@ -624,6 +624,15 @@ FACTOR : '(' EXPR ')'  {
 		$$.temp = $1.ptr ;
 		$$.constant = 0 ;
 		$$.val = "" ;
+
+		if($1.offset != NULL)
+		{			
+			symbol_table_row* temp = st_new_temp(st , $1.type , cur_scope) ;
+			char code[100] ;		
+			sprintf(code , "%s = %s[%s]" , temp -> name , get_first($1.val) , $1.offset -> name) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;
+			$$.temp = temp ;
+		}
 	}
 	;
 TYPE : T_INT { $$.type = T_INT ; cur_dt = T_INT ;}
@@ -722,7 +731,7 @@ list* arr_to_list(arr_list* al)
 	return list_reverse(ret) ;
 }
 
-symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name)
+symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name) // offset of element eletype within the structure . (reverse from actual order)
 {
 	struct_def_row* sdfr = sdf_find_row(sdf , eletype) ;
 	if(sdfr == NULL)
@@ -736,6 +745,17 @@ symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name)
 			return offset ;
 		}
 		int size = get_size(cur -> eletype) ;
+		if(cur -> dimlist != NULL)
+		{
+			int ttt = 1 ;
+			list* d = cur -> dimlist ;
+			while(d != NULL)
+			{
+				ttt *= d -> val ;
+				d = d -> next ;
+			}
+			size = size * ttt ;
+		}
 		if(offset == NULL)
 		{
 			offset = st_new_temp(st , T_INT , cur_scope) ;

@@ -149,7 +149,7 @@ int st_compare(symbol_table_row* a , symbol_table_row* b)
 
 int temp_num = 0 ;
 
-symbol_table_row* st_new_temp(symbol_table* st , int eletype , int scope)
+symbol_table_row* st_new_temp(symbol_table* st , int eletype , int scope) // this is eletype !!
 {
 	char* name = dupstr("$temp") ;
 	char num[10] ;

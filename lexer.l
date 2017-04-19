@@ -37,7 +37,7 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		return ID ;
 		}
 [+-]?[0-9]*"."[0-9]+ {
-			yylval.c.type = V_INT ;
+			yylval.c.type = V_FLOAT ;
 			yylval.c.f_val = atof(yytext) ;
 			return V_FLOAT ;
 	   }		

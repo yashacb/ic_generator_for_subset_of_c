@@ -1,17 +1,18 @@
-struct node
-{
+struct ab{
 	int a ;
+} ;
+struct cd {
+	int b ;
 } ;
 
-struct ab 
+int func2(float a)
 {
-	int a ;
-	int b ;
-	struct node n[2] ;
-} ;
+	
+}
 
 int func()
 {
-	struct ab b[2][3] ;
-	b[1][2].b = 2 ;
+	int c ;
+	float d ;
+	func2(c * d) ;
 }

@@ -14,8 +14,10 @@ symbol_table_row* resolve(symbol_table_row* str , list* dimlist) ;
 char* datatype_to_string(symbol_table_row* str) ;
 int expr_type(int t1 , int t2) ;
 int is_int(int t) ;
+int is_float(int t) ;
 int is_array(int t) ;
 int is_struct(int t) ;
+int is_char(int t) ;
 int parse_error = 0 ;
 
 func_table* ft = NULL ;
@@ -80,6 +82,7 @@ symbol_table_row* calculate_offset(arr_list* al , list* dimlist , int size) ;
 int sdf_struct_size(struct_def* sdf , int ind) ;
 int get_size(int eletype) ;
 symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name) ;
+symbol_table_row* coerce(symbol_table_row* cur , int to_type) ;
 %}
 %union{
 	char op ;
@@ -360,7 +363,7 @@ DIM_LIST : '[' V_INT ']' {
 		$$ = list_add($1 , $3.i_val) ;
 	}
 	; 
-ASG : LVALUE '=' EXPR ';' {
+ASG : LVALUE '=' EXPR ';' {		
 		symbol_table_row* resolved = resolve($1.ptr , $1.dimlist) ;	
 		if(resolved != NULL && resolved -> type == ARRAY)
 		{
@@ -378,7 +381,7 @@ ASG : LVALUE '=' EXPR ';' {
 		{
 			if($1.type == -1)
 			{
-				printf("Unknown type for '%s' on line no : %d .\n\n", $1.val , line_no) ;
+				printf("Unknown type for lvalue '%s' on line no : %d .\n\n", $1.val , line_no) ;
 			}
 			else
 			{
@@ -388,23 +391,46 @@ ASG : LVALUE '=' EXPR ';' {
 			}
 		}
 		else
-		{
+		{			
+			int flag = 0 ;
+			if(is_int($3.type) && is_float($1.type))
+				flag = 1 ;			
 			if($1.ptr != NULL && parse_error == 0)
 			{
 				char code[100] ;
 				if($1.offset != NULL)
 				{
 					if($3.constant == 0)
-						sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.temp -> name) ;
+					{
+						if(flag)
+							sprintf(code , "%s[%s] = (float)%s" , lname , $1.offset -> name , $3.temp -> name) ;
+						else
+							sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.temp -> name) ;
+					}
 					else
-						sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.val) ;
+					{
+						if(flag)
+							sprintf(code , "%s[%s] = (float)%s" , lname , $1.offset -> name , $3.val) ;
+						else
+							sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.val) ;
+					}
 				}
 				else
 				{
 					if($3.constant == 0)
-						sprintf(code , "%s = %s" , lname , $3.temp -> name) ;
+					{
+						if(flag)
+							sprintf(code , "%s = (float)%s" , lname , $3.temp -> name) ;
+						else
+							sprintf(code , "%s = %s" , lname , $3.temp -> name) ;
+					}
 					else
-						sprintf(code , "%s = %s" , lname , $3.val) ;
+					{
+						if(flag)
+							sprintf(code , "%s = (float)%s" , lname , $3.val) ;
+						else
+							sprintf(code , "%s = %s" , lname , $3.val) ;
+					}
 				}
 				ic = ic_add(ic , NOT_GOTO , code , -1) ;
 			}
@@ -553,15 +579,18 @@ ARR_LIST : { $$ = NULL ; cur_arr_index = 0 ;}
 ASOP : '+' { $$ = '+' ; }
 	| '-' { $$ = '-' ; }
 	;
-EXPR : EXPR ASOP TERM { 
-		int expr_t = expr_type($1.type , $3.type) ;
-		if(expr_t == -1 || is_struct($1.type))
+EXPR : EXPR ASOP TERM {
+		$$.temp = NULL ;
+		$$.constant = 0 ;
+		$$.type = -1 ;
+		$$.val = "" ;
+		int expr_t = expr_type($1.type , $3.type) ;	
+		if(expr_t == -1 || is_struct($1.type) || is_char($1.type) || is_char($3.type))
 		{
-			printf("Invalid operands for \'+\' on line_no : %d\n", line_no) ;
+			printf("Invalid operands '%s' and '%s' for \'+\' on line_no : %d\n\n", to_str_eletype($1.type) , to_str_eletype($3.type) , line_no) ;
 			parse_error = 1 ;
 		}
-
-		else if($1.temp -> type == ARRAY || $3.temp -> type == ARRAY)
+		else if(($1.temp != NULL && $1.temp -> type == ARRAY) || ($3.temp != NULL && $3.temp -> type == ARRAY))
 		{
 			printf("Arrays cannot be used as operands for '%c' on line no : %d .\n\n", $2 , line_no) ;
 			parse_error = 1 ;
@@ -569,16 +598,44 @@ EXPR : EXPR ASOP TERM {
 		else
 		{
 			$$.temp =  st_new_temp(st , expr_t , cur_scope) ;
+			$$.constant = 0 ;
+			$$.val = "" ;
 			char left[100] ;
 			if($1.constant != 0)
+			{
+				if(is_int($1.constant) && is_float(expr_t))
+				{
+					symbol_table_row* new = st_new_temp(st , T_FLOAT , cur_scope) ;
+					char code[100] ;
+					sprintf(code , "%s = (float)%s" , new -> name , $1.val) ;
+					ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					$1.val = new -> name ;
+				}
 				sprintf(left , "%s" , $1.val) ;
+			}
 			else
-				sprintf(left , "%s" , $1.temp -> name) ;
+			{
+				symbol_table_row* l = coerce($1.temp , expr_t) ;
+				sprintf(left , "%s" , l -> name) ;
+			}
 			char right[100] ;
 			if($3.constant != 0)
+			{
+				if(is_int($3.constant) && is_float(expr_t))
+				{
+					symbol_table_row* new = st_new_temp(st , T_FLOAT , cur_scope) ;
+					char code[100] ;
+					sprintf(code , "%s = (float)%s" , new -> name , $3.val) ;
+					ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					$3.val = new -> name ;
+				}
 				sprintf(right , "%s" , $3.val) ;
+			}
 			else
-				sprintf(right , "%s" , $3.temp -> name) ;
+			{
+				symbol_table_row* r = coerce($3.temp , expr_t) ;
+				sprintf(right , "%s" , r -> name) ;
+			}
 			char code[100] ;
 			sprintf(code , "%s = %s %c %s" , $$.temp -> name , left , $2 , right) ;
 			ic = ic_add(ic , NOT_GOTO , code , -1) ;
@@ -596,13 +653,17 @@ MDOP : '*' { $$ = '*' ; }
 	| '/' { $$ = '/' ; }
 	;
 TERM : TERM MDOP FACTOR { 
+		$$.temp = NULL ;
+		$$.constant = 0 ;
+		$$.type = -1 ;
+		$$.val = "" ;
 		int expr_t = expr_type($1.type , $3.type) ;
-		if(expr_t == -1 || is_struct($1.type))
+		if(expr_t == -1 || is_struct($1.type) || is_char($1.type) || is_char($3.type))
 		{
 			printf("Invalid operands for \'*\' on line_no : %d\n\n", line_no) ;
 			parse_error = 1 ;
 		}
-		else if($1.temp -> type == ARRAY || $3.temp -> type == ARRAY)
+		else if(($1.temp != NULL && $1.temp -> type == ARRAY) || ($3.temp != NULL && $3.temp -> type == ARRAY))
 		{
 			printf("Arrays cannot be used as operands for '%c' on line no : %d .\n\n", $2 , line_no) ;
 			parse_error ;
@@ -610,16 +671,44 @@ TERM : TERM MDOP FACTOR {
 		else
 		{
 			$$.temp =  st_new_temp(st , expr_t , cur_scope) ;
+			$$.constant = 0 ;
+			$$.val = "" ;
 			char left[100] ;
 			if($1.constant != 0)
+			{
+				if(is_int($1.constant) && is_float(expr_t))
+				{
+					symbol_table_row* new = st_new_temp(st , T_FLOAT , cur_scope) ;
+					char code[100] ;
+					sprintf(code , "%s = (float)%s" , new -> name , $1.val) ;
+					ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					$1.val = new -> name ;
+				}
 				sprintf(left , "%s" , $1.val) ;
+			}
 			else
-				sprintf(left , "%s" , $1.temp -> name) ;
+			{
+				symbol_table_row* l = coerce($1.temp , expr_t) ;
+				sprintf(left , "%s" , l -> name) ;
+			}
 			char right[100] ;
 			if($3.constant != 0)
+			{
+				if(is_int($3.constant) && is_float(expr_t))
+				{
+					symbol_table_row* new = st_new_temp(st , T_FLOAT , cur_scope) ;
+					char code[100] ;
+					sprintf(code , "%s = (float)%s" , new -> name , $3.val) ;
+					ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					$3.val = new -> name ;
+				}
 				sprintf(right , "%s" , $3.val) ;
+			}
 			else
-				sprintf(right , "%s" , $3.temp -> name) ;
+			{
+				symbol_table_row* r = coerce($3.temp , expr_t) ;
+				sprintf(right , "%s" , r -> name) ;
+			}
 			char code[100] ;
 			sprintf(code , "%s = %s %c %s" , $$.temp -> name , left , $2 , right) ;
 			ic = ic_add(ic , NOT_GOTO , code , -1) ;
@@ -650,6 +739,7 @@ FACTOR : '(' EXPR ')'  {
 	| V_FLOAT { 
 		$$.constant = V_FLOAT ;
 		$$.type = $1.type ; 
+		$$.temp = NULL ;
 		char* val = (char*) malloc(21*sizeof(char)) ;
 		sprintf(val , "%f" , $1.f_val) ;
 		$$.val = val ;
@@ -657,6 +747,7 @@ FACTOR : '(' EXPR ')'  {
 	| V_CHAR { 
 		$$.constant = V_CHAR ;
 		$$.type = $1.type ; 
+		$$.temp = NULL ;
 		char* val = (char*) malloc(2*sizeof(char)) ;
 		sprintf(val , "%c" , $1.c_val) ;
 		$$.val = val ;
@@ -954,4 +1045,41 @@ int get_size(int eletype)
 	else
 		size = sdf_struct_size(sdf , eletype) ;
 	return size ;
+}
+
+symbol_table_row* coerce(symbol_table_row* cur , int to_type)
+{
+	if(is_struct(to_type) || is_struct(cur -> eletype) || to_type == T_CHAR)
+		return cur ; // cant coerce if to_type is struct .
+	if(cur -> eletype == to_type)
+		return cur ;
+	if(cur -> eletype == T_INT && to_type == T_FLOAT)
+	{
+		symbol_table_row* new = st_new_temp(st , T_FLOAT , cur_scope) ;
+		char code[100] ;
+		sprintf(code , "%s = (float)%s" , new -> name , cur -> name) ;
+		ic = ic_add(ic , NOT_GOTO , code , -1) ;
+		return new ;
+	}
+}
+
+char* type_map(int type)
+{
+	switch(type)
+	{
+		case T_INT:
+			return "T_TINT" ;
+		case T_FLOAT:
+			return "T_FLOAT" ;
+		case T_CHAR:
+			return "T_CHAR" ;
+		case V_INT:
+			return "V_INT" ;
+		case V_FLOAT:
+			return "V_FLOAT" ;
+		case V_CHAR :
+			return "V_CHAR" ;
+		default:
+			return "struct" ;
+	}
 }

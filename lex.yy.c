@@ -879,7 +879,7 @@ case 6:
 YY_RULE_SETUP
 #line 39 "lexer.l"
 {
-			yylval.c.type = V_INT ;
+			yylval.c.type = V_FLOAT ;
 			yylval.c.f_val = atof(yytext) ;
 			return V_FLOAT ;
 	   }		

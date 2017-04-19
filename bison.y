@@ -83,6 +83,7 @@ int sdf_struct_size(struct_def* sdf , int ind) ;
 int get_size(int eletype) ;
 symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name) ;
 symbol_table_row* coerce(symbol_table_row* cur , int to_type) ;
+int equal_types(int t1 , int t2) ;
 %}
 %union{
 	char op ;
@@ -226,16 +227,36 @@ ARG_LIST : ARG_LIST ',' EXPR {
 		{
 			int num_param = call_func_ptr -> num_param ;
 			symbol_table_row* expected = ft_get_param(call_func_ptr , num_param - 1 - $$) ;			
-			symbol_table_row* found = $3.temp ;		
-			if(st_compare(expected , found) != 1)
+			if(expected != NULL)
 			{
-				printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
-				printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
-				parse_error = 1 ;
+				if($3.temp != NULL)
+				{
+					symbol_table_row* found = $3.temp ;		
+					if(st_compare(expected , found) != 1)
+					{
+						printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
+						printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
+						parse_error = 1 ;
+					}
+					char code[100] ;
+					sprintf(code , "param %s" , $3.temp -> name) ;
+					ic = ic_add(ic , NOT_GOTO , code , -1) ;
+				}
+				else
+				{
+					if(!equal_types(expected -> eletype , $3.constant))
+					{
+						printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
+						printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , to_str_eletype($3.constant == 0 ? -1 : $3.constant)) ;
+					}
+					else
+					{
+						char code[100] ;
+						sprintf(code , "param %s" , $3.val) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					}
+				}
 			}
-			char code[100] ;
-			sprintf(code , "param %s" , $3.temp -> name) ;
-			ic = ic_add(ic , NOT_GOTO , code , -1) ;
 		}
 	}
 	| EXPR  { 
@@ -244,18 +265,38 @@ ARG_LIST : ARG_LIST ',' EXPR {
 		{
 			int num_param = call_func_ptr -> num_param ;
 			symbol_table_row* expected = ft_get_param(call_func_ptr , num_param - 1 - $$) ;
-			symbol_table_row* found = $1.temp ;			
-			if(st_compare(expected , found) != 1)
+			if(expected != NULL)
 			{
-				printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
-				printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
-				parse_error = 1 ;
-			}
-			else
-			{
-				char code[100] ;
-				sprintf(code , "param %s" , $1.temp -> name) ;
-				ic = ic_add(ic , NOT_GOTO , code , -1) ;
+				if($1.temp != NULL)
+				{
+					symbol_table_row* found = $1.temp ;			
+					if(st_compare(expected , found) != 1)
+					{
+						printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
+						printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
+						parse_error = 1 ;
+					}
+					else
+					{
+						char code[100] ;
+						sprintf(code , "param %s" , $1.temp -> name) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					}
+				}
+				else
+				{
+					if(!equal_types(expected -> eletype , $1.constant))
+					{
+						printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
+						printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , to_str_eletype($1.constant == 0 ? -1 : $1.constant)) ;
+					}
+					else
+					{
+						char code[100] ;
+						sprintf(code , "param %s" , $1.val) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					}
+				}
 			}
 		}
 	}
@@ -438,7 +479,7 @@ ASG : LVALUE '=' EXPR ';' {
 		$$.type = $1.type ;
 	}
 	;
-LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {		
+LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "global" ; } LVALUE_CHECK {		
 		$$.type = $4.type ;
 		$$.ptr = $4.ptr ;
 		$$.st = $4.st ;
@@ -461,12 +502,8 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 				$$.val = strcat2($$.val , "[]") ;
 			}
 		}
-		else
-		{
-			printf("'%s' is not declared in current scope on line no : %d. \n\n", $1.val , line_no) ;
-		}
 	}
-	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ; } LVALUE_CHECK {
+	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ;  $<i>$.val = $1.val ; } LVALUE_CHECK {
 		$$.type = $6.type ;
 		$$.ptr = $6.ptr ;
 		$$.st = $6.st ;
@@ -492,11 +529,6 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 
 			$$.offset = offset ;			
 		}
-		else
-		{
-			if($1.ptr != NULL && $1.ptr -> type == STRUCT_T)
-				printf("'%s' not declared in scope of '%s' on line no : %d\n\n", $3.val , $1.val , line_no) ;
-		}
 
 		if($1.ptr == NULL || list_length($1.dimlist) < list_length($1.ptr -> dimlist) || $1.ptr -> type != STRUCT_T)
 		{
@@ -514,17 +546,14 @@ LVALUE_CHECK : {
 		if(res == NULL)
 		{
 			$$.type = -1 ;
+
+			printf("'%s' is not declared in '%s''s scope on line no : %d. \n\n" , val , $<i>-0.val , line_no) ;
 			parse_error = 1 ;
 		}
 		else
 		{
 			list* dimlist = res -> dimlist ;
-			if(list_length(cur) > list_length(dimlist))
-			{
-				printf("Number of dimensions exceeded for '%s' on line no : %d .\n", val , line_no) ;
-				printf("Declared dimensions : %d . Found dimensions : %d\n\n", list_length(dimlist) , list_length(cur)) ;
-				parse_error = 1 ;
-			}
+			int lc = list_length(cur) , ld = list_length(dimlist) ;
 			int ind = 0 ;
 			while(cur != NULL && dimlist != NULL)
 			{
@@ -540,6 +569,13 @@ LVALUE_CHECK : {
 				ind ++ ;
 				cur = cur -> next ;
 				dimlist = dimlist -> next ;
+			}
+			if(lc > ld)
+			{
+				printf("Number of dimensions exceeded for '%s' on line no : %d .\n", val , line_no) ;
+				printf("Declared dimensions : %d . Found dimensions : %d\n\n", ld , lc) ;
+				parse_error = 1 ;
+				res = NULL ;				
 			}
 		}
 		$$.ptr = res ;
@@ -1082,4 +1118,17 @@ char* type_map(int type)
 		default:
 			return "struct" ;
 	}
+}
+
+int equal_types(int t1 , int t2)
+{
+	if(is_char(t1) && is_char(t2))
+		return 1 ;
+	else if(is_int(t1) && is_int(t2))
+		return 1 ;
+	else if(is_float(t1) && is_float(t2))
+		return 1 ;
+	else if(t1 != -1 && t2 != -1)
+		return t1 == t2 ;
+	return 0 ;
 }

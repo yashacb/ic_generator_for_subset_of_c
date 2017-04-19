@@ -1,18 +1,21 @@
 struct ab{
 	int a ;
+	int b ;
 } ;
 struct cd {
 	int b ;
+	struct ab a ;
+	float c ;
 } ;
 
-int func2(float a)
+int func2(float a , float b)
 {
 	
 }
 
 int func()
 {
-	int c ;
-	float d ;
-	func2(c * d) ;
+	struct cd c ;
+	c.a = 3 ;
+	
 }

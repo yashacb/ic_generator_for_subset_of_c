@@ -82,6 +82,7 @@ int get_size(int eletype) ;
 symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name) ;
 %}
 %union{
+	char op ;
 	decl d ;
 	expr e ;
 	constant c ;
@@ -124,6 +125,8 @@ symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name) ;
 %type <np> PARAM_LIST
 %type <np> ARG_LIST
 %type <np> ARGS_LIST
+%type <op> ASOP
+%type <op> MDOP
 %start S
 %%
 S : FUNC_DEF S
@@ -337,32 +340,40 @@ ASG : LVALUE '=' EXPR ';' {
 			printf("Cannot assign to array '%s' on line no : %d\n\n", $1.val , line_no) ;
 			parse_error = 1 ;
 		}
+		if($3.temp != NULL && $3.temp -> type == ARRAY)
+		{
+			printf("Cannot assign an array to lvalue on line no : %d\n\n", line_no) ;
+			parse_error = 1 ;	
+		}
 		char* lname = get_first($1.val) ;
-		int expr_t = expr_type($1.type , $3.type) ;
+		int expr_t = expr_type($1.type , $3.type) ; // cmopares eletypes !
 		if(expr_t == -1)
 		{
 			printf("Assignment of incompatible types on line no : %d .\n", line_no) ;
 			printf("Assigning '%s' to '%s' \n\n", to_str_eletype($3.type) , datatype_to_string(resolve($1.ptr , $1.dimlist))) ;
 			parse_error = 1 ;
 		}
-		if($1.ptr != NULL && parse_error == 0)
-		{			
-			char code[100] ;			
-			if($1.offset != NULL)	
+		else
+		{
+			if($1.ptr != NULL && parse_error == 0)
 			{
-				if($3.constant == 0)
-					sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.temp -> name) ;
+				char code[100] ;
+				if($1.offset != NULL)
+				{
+					if($3.constant == 0)
+						sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.temp -> name) ;
+					else
+						sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.val) ;
+				}
 				else
-					sprintf(code , "%s[%s] = %s" , lname , $1.offset -> name , $3.val) ;
+				{
+					if($3.constant == 0)
+						sprintf(code , "%s = %s" , lname , $3.temp -> name) ;
+					else
+						sprintf(code , "%s = %s" , lname , $3.val) ;
+				}
+				ic = ic_add(ic , NOT_GOTO , code , -1) ;
 			}
-			else
-			{
-				if($3.constant == 0)
-					sprintf(code , "%s = %s" , lname , $3.temp -> name) ;
-				else
-					sprintf(code , "%s = %s" , lname , $3.val) ;
-			}
-			ic = ic_add(ic , NOT_GOTO , code , -1) ;
 		}
 		$$.type = $1.type ;
 	}
@@ -374,17 +385,25 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 		$$.val = $4.val ;
 		$$.dimlist = arr_to_list($2) ;
 		$$.arrlist = $2 ;
+		$$.offset = NULL ;
 
-		symbol_table_row* offset = calculate_offset($$.arrlist , $$.ptr -> dimlist , get_size($$.ptr -> eletype)) ;			
-		
-		$$.offset = offset ;
-		$$.val = (char*) malloc(30*sizeof(30)) ;
-		$$.val = strcat2($$.val , $1.val) ;
-		list* cur = arr_to_list($2) ;
-		while(cur != NULL)
+		if($$.ptr != NULL)
 		{
-			cur = cur -> next ;
-			$$.val = strcat2($$.val , "[]") ;
+			symbol_table_row* offset = calculate_offset($$.arrlist , $$.ptr -> dimlist , get_size($$.ptr -> eletype)) ;			
+		
+			$$.offset = offset ;
+			$$.val = (char*) malloc(30*sizeof(30)) ;
+			$$.val = strcat2($$.val , $1.val) ;
+			list* cur = arr_to_list($2) ;
+			while(cur != NULL)
+			{
+				cur = cur -> next ;
+				$$.val = strcat2($$.val , "[]") ;
+			}
+		}
+		else
+		{
+			printf("'%s' not declared in current scope on line no : %d. \n\n", $1.val , line_no) ;
 		}
 	}
 	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ; } LVALUE_CHECK {
@@ -403,19 +422,26 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 		$$.dimlist = arr_to_list($4) ;
 		$$.arrlist = $4 ;
 
-		symbol_table_row* right = calculate_offset($$.arrlist , $$.ptr -> dimlist , get_size($$.ptr -> eletype)) ;
-		symbol_table_row* struct_offset = sdf_offset(sdf , $1.ptr -> eletype , $3.val) ;
-
-		symbol_table_row* offset = $1.offset ;
-		offset = add_offsets(offset , struct_offset) ;
-		offset = add_offsets(offset , right) ;
-
-		$$.offset = offset ;
-		if($1.ptr == NULL || list_length($1.dimlist) < list_length($1.ptr -> dimlist))
+		if($$.ptr != NULL)
 		{
-			printf("Cannot de-reference a non-struct type '%s' on line no : %d\n\n", $1.val , line_no) ;
-			parse_error = 1 ;
-			$$.type = -1 ;
+			symbol_table_row* right = calculate_offset($$.arrlist , $$.ptr -> dimlist , get_size($$.ptr -> eletype)) ;
+			symbol_table_row* struct_offset = sdf_offset(sdf , $1.ptr -> eletype , $3.val) ;
+
+			symbol_table_row* offset = $1.offset ;
+			offset = add_offsets(offset , struct_offset) ;
+			offset = add_offsets(offset , right) ;
+
+			$$.offset = offset ;
+			if($1.ptr == NULL || list_length($1.dimlist) < list_length($1.ptr -> dimlist))
+			{
+				printf("Cannot de-reference a non-struct type '%s' on line no : %d\n\n", $1.val , line_no) ;
+				parse_error = 1 ;
+				$$.type = -1 ;
+			}
+		}
+		else
+		{
+			printf("'%s' not declared in scope of '%s' on line no : %d\n\n", $3.val , $1.val , line_no) ;
 		}
 	}
 	;
@@ -427,7 +453,6 @@ LVALUE_CHECK : {
 		if(res == NULL)
 		{
 			$$.type = -1 ;
-			printf("'%s' is not declared in current scope on line no : %d\n\n", val , line_no) ;
 			parse_error = 1 ;
 		}
 		else
@@ -439,17 +464,19 @@ LVALUE_CHECK : {
 				printf("Declared dimensions : %d . Found dimensions : %d\n\n", list_length(dimlist) , list_length(cur)) ;
 				parse_error = 1 ;
 			}
+			int ind = 0 ;
 			while(cur != NULL && dimlist != NULL)
 			{
 				if(cur -> val != -1)
 				{
 					if(cur -> val >= dimlist -> val)
 					{
-						printf("Array index out of bounds for '%s' on line no : %d . \n", val , line_no) ;
+						printf("Array index %d out of bounds for '%s' on line no : %d . \n", ind , val , line_no) ;
 						printf("Actual size : %d . Found index : %d\n\n", dimlist -> val , cur -> val) ;
 						parse_error = 1 ;
 					}
 				}
+				ind ++ ;
 				cur = cur -> next ;
 				dimlist = dimlist -> next ;
 			}
@@ -487,7 +514,11 @@ ARR_LIST : { $$ = NULL ; cur_arr_index = 0 ;}
 		cur_arr_index ++ ;
 	}
 	;
-EXPR : EXPR '+' TERM { 
+
+ASOP : '+' { $$ = '+' ; }
+	| '-' { $$ = '-' ; }
+	;
+EXPR : EXPR ASOP TERM { 
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1 || is_struct($1.type))
 		{
@@ -497,30 +528,18 @@ EXPR : EXPR '+' TERM {
 		else
 		{
 			$$.temp =  st_new_temp(st , expr_t , cur_scope) ;
-			char* code = dupstr($$.temp -> name) ;
-			code = strcat2(code , " = ") ;
-			code = strcat2(code , $1.temp -> name) ;
-			code = strcat2(code , " + ") ;
-			code = strcat2(code , $3.temp -> name) ;
-			ic = ic_add(ic , NOT_GOTO , code , -1) ;
-		}
-		$$.type = expr_t ; 
-	}
-	| EXPR '-' TERM{ 
-		int expr_t = expr_type($1.type , $3.type) ;
-		if(expr_t == -1 || is_struct($1.type))
-		{
-			printf("Invalid operands for \'-\' on line_no : %d\n\n", line_no) ;
-			parse_error = 1 ;
-		}
-		else
-		{			
-			$$.temp =  st_new_temp(st , expr_t , cur_scope) ;
-			char* code = dupstr($$.temp -> name) ;
-			code = strcat2(code , " = ") ;
-			code = strcat2(code , $1.temp -> name) ;
-			code = strcat2(code , " - ") ;
-			code = strcat2(code , $3.temp -> name) ;
+			char left[100] ;
+			if($1.constant != 0)
+				sprintf(left , "%s" , $1.val) ;
+			else
+				sprintf(left , "%s" , $1.temp -> name) ;
+			char right[100] ;
+			if($3.constant != 0)
+				sprintf(right , "%s" , $3.val) ;
+			else
+				sprintf(right , "%s" , $3.temp -> name) ;
+			char code[100] ;
+			sprintf(code , "%s = %s %c %s" , $$.temp -> name , left , $2 , right) ;
 			ic = ic_add(ic , NOT_GOTO , code , -1) ;
 		}
 		$$.type = expr_t ; 
@@ -532,57 +551,34 @@ EXPR : EXPR '+' TERM {
 		$$.val = $1.val ;
 	}
 	;
-TERM : TERM '*' FACTOR { 
+MDOP : '*' { $$ = '*' ; }
+	| '/' { $$ = '/' ; }
+	;
+TERM : TERM MDOP FACTOR { 
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1 || is_struct($1.type))
 		{
 			printf("Invalid operands for \'*\' on line_no : %d\n\n", line_no) ;
 			parse_error = 1 ;
 		}
-		$$.type = expr_t ;
-		char* left = NULL ;
-		if($1.constant == 1)
-			left = strdup($1.val) ;
 		else
-			left = strdup($1.temp -> name) ;
-		char* right = NULL ;
-		if($3.constant == 1)
-			right = strdup($3.val) ;
-		else
-			right = strdup($3.temp -> name) ;
-		$$.temp = st_new_temp(st , expr_t , cur_scope) ;
-		char* code = dupstr($$.temp -> name) ;
-		code = strcat2(code , " = ") ;
-		code = strcat2(code , left) ;
-		code = strcat2(code , " * ") ;
-		code = strcat2(code , right) ;
-		ic = ic_add(ic , NOT_GOTO , code , -1) ; 
-	}
-	| TERM '/' FACTOR { 
-		int expr_t = expr_type($1.type , $3.type) ;
-		if(expr_t == -1 || is_struct($1.type))
 		{
-			printf("Invalid operands for '/' on line_no : %d\n\n", line_no) ;
-			parse_error = 1 ;
+			$$.temp =  st_new_temp(st , expr_t , cur_scope) ;
+			char left[100] ;
+			if($1.constant != 0)
+				sprintf(left , "%s" , $1.val) ;
+			else
+				sprintf(left , "%s" , $1.temp -> name) ;
+			char right[100] ;
+			if($3.constant != 0)
+				sprintf(right , "%s" , $3.val) ;
+			else
+				sprintf(right , "%s" , $3.temp -> name) ;
+			char code[100] ;
+			sprintf(code , "%s = %s %c %s" , $$.temp -> name , left , $2 , right) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;
 		}
-		$$.type = expr_t ; 
-		char* left = NULL ;
-		if($1.constant == 1)
-			left = strdup($1.val) ;
-		else
-			left = strdup($1.temp -> name) ;
-		char* right = NULL ;
-		if($3.constant == 1)
-			right = strdup($3.val) ;
-		else
-			right = strdup($3.temp -> name) ;
-		$$.temp = st_new_temp(st , expr_t , cur_scope) ;
-		char* code = dupstr($$.temp -> name) ;
-		code = strcat2(code , " = ") ;
-		code = strcat2(code , left) ;
-		code = strcat2(code , " * ") ;
-		code = strcat2(code , right) ;
-		ic = ic_add(ic , NOT_GOTO , code , -1) ; 
+		$$.type = expr_t ;
 	}
 	| FACTOR { 
 		$$.type = $1.type ; 
@@ -623,15 +619,27 @@ FACTOR : '(' EXPR ')'  {
 		$$.type = $1.type ; 
 		$$.temp = $1.ptr ;
 		$$.constant = 0 ;
-		$$.val = "" ;
+		$$.val = $1.val ;
 
-		if($1.offset != NULL)
-		{			
-			symbol_table_row* temp = st_new_temp(st , $1.type , cur_scope) ;
-			char code[100] ;		
-			sprintf(code , "%s = %s[%s]" , temp -> name , get_first($1.val) , $1.offset -> name) ;
-			ic = ic_add(ic , NOT_GOTO , code , -1) ;
-			$$.temp = temp ;
+		if($1.ptr != NULL)
+		{
+			symbol_table_row* resolved = resolve($1.ptr , $1.dimlist) ;
+			if(resolved -> type == ARRAY)
+			{
+				printf("Array %s cannot be a part of an arithmetic expression on liene no : %d . \n\n\n", $1.val , line_no) ;
+				parse_error = 1 ;
+				$$.temp = NULL ;
+				$$.type = -1 ;
+				$$.val = "" ;
+			}
+			else if($1.offset != NULL)
+			{
+				symbol_table_row* temp = st_new_temp(st , $1.type , cur_scope) ;
+				char code[100] ;		
+				sprintf(code , "%s = %s[%s]" , temp -> name , get_first($1.val) , $1.offset -> name) ;
+				ic = ic_add(ic , NOT_GOTO , code , -1) ;
+				$$.temp = temp ;
+			}
 		}
 	}
 	;
@@ -829,8 +837,8 @@ symbol_table_row* add_offsets(symbol_table_row* o1 , symbol_table_row* o2)
 }
 
 symbol_table_row* calculate_offset(arr_list* al , list* dimlist , int size) // dimlist is the dimension list of the declaration !
-{		
-	if(arr_length(al) != list_length(dimlist))
+{	
+	if(arr_length(al) > list_length(dimlist))
 		return NULL ;
 	if(dimlist == NULL || al == NULL)
 		return NULL ;
@@ -838,7 +846,7 @@ symbol_table_row* calculate_offset(arr_list* al , list* dimlist , int size) // d
 	arr_list* i1 = al ;
 	arr_list* i2 = al -> next ;	
 	symbol_table_row* res = NULL ;
-	while(dimlist != NULL)
+	while(i2 != NULL && dimlist != NULL)
 	{
 		symbol_table_row* t1 = st_new_temp(st , T_INT , cur_scope) ;
 		char code[100] ;
@@ -855,14 +863,27 @@ symbol_table_row* calculate_offset(arr_list* al , list* dimlist , int size) // d
 			sprintf(code , "%s = %s + %s" , t2 -> name , t1 -> name ,  i2 -> e.val) ; // t2 = t1 + i2
 		ic = ic_add(ic , NOT_GOTO , code , -1) ;
 		res = t2 ;
-		i1 = i1 -> next ;
+
+		arr_list* next = (arr_list*) malloc(sizeof(arr_list)) ;
+		next -> e.temp = t2 ;
+		next -> e.constant = 0 ;
+		next -> e.val = "" ;
+		next -> next = NULL ;
+
+		i1 = next ;
 		i2 = i2 -> next ;
-		al = al -> next ;
 		dimlist = dimlist -> next ;
 	}
+	int s = 1 ;
+	while(dimlist != NULL)
+	{
+		s *= dimlist -> val ;
+		dimlist = dimlist -> next ;
+	}
+	size *= s ;
 	if(res == NULL)
 	{
-		res = i1 -> e.temp ;
+		res = i1 -> e.temp ;	
 		symbol_table_row* t3 = st_new_temp(st , T_INT , cur_scope) ;
 		char code[100] ;
 		if(i1 -> e.constant == 0)

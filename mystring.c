@@ -15,5 +15,5 @@ char* strcat2(char* a , char* b)
 char* get_first(char* s)
 {
 	char* dup = dupstr(s) ;
-	return strtok(s , "[.") ;
+	return strtok(dup , "[.") ;
 }

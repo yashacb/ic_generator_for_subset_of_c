@@ -2105,6 +2105,7 @@ int expr_type(int t1 , int t2)
 		return T_FLOAT ;
 	if(is_int(t1) || is_int(t2))
 		return T_INT ;
+	return -1 ;
 }
 
 int main()

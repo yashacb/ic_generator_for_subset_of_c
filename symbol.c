@@ -140,7 +140,7 @@ int st_size(symbol_table* st)
 int st_compare(symbol_table_row* a , symbol_table_row* b)
 {
 	if( a == NULL || b == NULL)
-		return 1 ;
+		return 0 ;
 	if(a -> type == b -> type && a -> eletype == b -> eletype && 
 		list_length(a -> dimlist) == list_length(b -> dimlist))
 		return 1 ;
@@ -152,8 +152,24 @@ int temp_num = 0 ;
 symbol_table_row* st_new_temp(symbol_table* st , int eletype , int scope) // this is eletype !!
 {
 	char* name = dupstr("$temp") ;
-	char num[10] ;
+	char num[20] ;
 	sprintf(num , "%d" , temp_num++) ;
 	name = strcat2(name , num) ;
-	return st_add(st , name , SIMPLE , eletype , NULL , scope) ;
+	symbol_table_row* ret =  st_add(st , name , SIMPLE , eletype , NULL , scope) ;
+	return ret ;
+}
+
+symbol_table_row* st_new_temp_from_row(symbol_table* st , symbol_table_row* new , int cur_scope)
+{
+	if(st == NULL)
+		return NULL ;
+
+	char* new_name = (char*) malloc(20*sizeof(int)) ;
+	sprintf(new_name , "%s%d" , "$temp" , temp_num++) ;
+	new -> name = new_name ;
+	new -> scope = cur_scope ;
+	new -> next = st -> list ;
+	st -> list = new ;
+
+	return new ;
 }

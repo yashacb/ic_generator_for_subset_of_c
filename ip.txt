@@ -1,9 +1,17 @@
-int a[23] ;
+struct node
+{
+	int a ;
+} ;
+
+struct ab 
+{
+	int a ;
+	int b ;
+	struct node n[2] ;
+} ;
 
 int func()
 {
-	{
-		int a ;
-		a[2] = 4 ;
-	}
+	struct ab b[2][3] ;
+	b[1][2].b = 2 ;
 }

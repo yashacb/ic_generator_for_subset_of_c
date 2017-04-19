@@ -45,6 +45,8 @@ void sm_print_table(scope_map* sm)
 			list = list -> next ;
 			if(list != NULL)
 				printf(" ,\n");
+			else
+				printf("\n");
 		}
 		cur = cur -> next ;
 	}

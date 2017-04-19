@@ -2109,8 +2109,7 @@ int expr_type(int t1 , int t2)
 }
 
 int main()
-{
-	printf("\n");
+{	
 	int i = 0 ;
 	st = st_new() ;
 	sdf = sdf_new() ;
@@ -2118,20 +2117,24 @@ int main()
 	sm = sm_new(cur_scope , st) ;
 	st = sm_find(sm , cur_scope) ;
 	ft = ft_new(NULL) ;
+	printf("\n");
 	yyparse() ;	
 	if(!parse_error)
+	{
 		ic_print(ic) ;
-// 	sm_print_table(sm) ;
-// 	printf("\n\n");
-// 	for(i = 0 ; i < 80 ; i++)
-// 		printf("-") ;	
-// 	printf("\n\n") ;
-	// sdf_print(sdf) ;
-// 	for(i = 0 ; i < 80 ; i++)
-// 		printf("-") ;	
-	// printf("\n\nPrinting function defenitions table:\n\n") ;
-	// ft_print(ft) ;
-// 	for(i = 0 ; i < 80 ; i++)
-// 		printf("-") ;	
-// 	printf("\n\nParse successful\n");
+		sm_print_table(sm) ;
+		// st_print(st) ;
+	// 	printf("\n\n");
+	// 	for(i = 0 ; i < 80 ; i++)
+	// 		printf("-") ;	
+	// 	printf("\n\n") ;
+		// sdf_print(sdf) ;
+	// 	for(i = 0 ; i < 80 ; i++)
+	// 		printf("-") ;	
+		// printf("\n\nPrinting function defenitions table:\n\n") ;
+		// ft_print(ft) ;
+	// 	for(i = 0 ; i < 80 ; i++)
+	// 		printf("-") ;	
+	// 	printf("\n\nParse successful\n");
+	}
 }

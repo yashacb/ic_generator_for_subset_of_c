@@ -140,6 +140,11 @@ FUNC_DEF : TYPE ID {
 			exit(0) ;
 		}
 		cur_func_ptr = ft_add(ft , $2.val , NULL , NULL , $1.type , 0) ;
+
+		char code[100] ;
+		sprintf(code , "function begin %s" , $2.val) ;
+		ic = ic_add(ic , NOT_GOTO , code , -1) ;
+
 		sstk_push(sstk , cur_scope) ;
 		cur_scope = sm_get_scope() ;
 		sm = sm_add(sm , cur_scope , st) ;
@@ -149,6 +154,10 @@ FUNC_DEF : TYPE ID {
 		cur_func_ptr -> param_list -> list = st -> list ;		
 		cur_func_ptr -> num_param = $5 ;
 	} '{' STMTS '}' { 
+		char code[100] ;
+		sprintf(code , "func end") ;
+		ic = ic_add(ic , NOT_GOTO , code , -1) ;
+
 		cur_func_ptr -> local_list = st ;
 		cur_scope = sstk_pop(sstk) ;
 		st = sm_find(sm , cur_scope) ;
@@ -190,7 +199,16 @@ FUNC_CALL : ID {
 				printf("Error incorrect number of arguments for function '%s' on line no : %d .\n" , call_func_ptr -> name , line_no) ;
 				printf("Expected : %d , but found : %d . \n\n", call_func_ptr -> num_param , called_params + 1) ;
 				parse_error = 1 ;
-			}			
+			}
+			else
+			{
+				char code[100] ;
+				symbol_table_row* ret_temp = st_new_temp(st , call_func_ptr -> res_type , cur_scope) ;
+				sprintf(code , "refparam %s" , ret_temp -> name) ;
+				ic = ic_add(ic , NOT_GOTO , code , -1) ;
+				sprintf(code , "call %s %d" , call_func_ptr -> name , call_func_ptr -> num_param) ;
+				ic = ic_add(ic , NOT_GOTO , code , -1) ;
+			}
 		}
 		$$ = NULL ;
 	}
@@ -212,6 +230,9 @@ ARG_LIST : ARG_LIST ',' EXPR {
 				printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
 				parse_error = 1 ;
 			}
+			char code[100] ;
+			sprintf(code , "param %s" , $3.temp -> name) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;
 		}
 	}
 	| EXPR  { 
@@ -220,12 +241,18 @@ ARG_LIST : ARG_LIST ',' EXPR {
 		{
 			int num_param = call_func_ptr -> num_param ;
 			symbol_table_row* expected = ft_get_param(call_func_ptr , num_param - 1 - $$) ;
-			symbol_table_row* found = $1.temp ;
+			symbol_table_row* found = $1.temp ;			
 			if(st_compare(expected , found) != 1)
 			{
 				printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
 				printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
 				parse_error = 1 ;
+			}
+			else
+			{
+				char code[100] ;
+				sprintf(code , "param %s" , $1.temp -> name) ;
+				ic = ic_add(ic , NOT_GOTO , code , -1) ;
 			}
 		}
 	}
@@ -349,9 +376,16 @@ ASG : LVALUE '=' EXPR ';' {
 		int expr_t = expr_type($1.type , $3.type) ; // cmopares eletypes !
 		if(expr_t == -1)
 		{
-			printf("Assignment of incompatible types on line no : %d .\n", line_no) ;
-			printf("Assigning '%s' to '%s' \n\n", to_str_eletype($3.type) , datatype_to_string(resolve($1.ptr , $1.dimlist))) ;
-			parse_error = 1 ;
+			if($1.type == -1)
+			{
+				printf("Unknown type for '%s' on line no : %d .\n\n", $1.val , line_no) ;
+			}
+			else
+			{
+				printf("Assignment of incompatible types on line no : %d .\n", line_no) ;
+				printf("Assigning '%s' to '%s' \n\n", to_str_eletype($3.type) , datatype_to_string(resolve($1.ptr , $1.dimlist))) ;
+				parse_error = 1 ;
+			}
 		}
 		else
 		{
@@ -374,7 +408,7 @@ ASG : LVALUE '=' EXPR ';' {
 				}
 				ic = ic_add(ic , NOT_GOTO , code , -1) ;
 			}
-		}
+		}		
 		$$.type = $1.type ;
 	}
 	;
@@ -403,7 +437,7 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 		}
 		else
 		{
-			printf("'%s' not declared in current scope on line no : %d. \n\n", $1.val , line_no) ;
+			printf("'%s' is not declared in current scope on line no : %d. \n\n", $1.val , line_no) ;
 		}
 	}
 	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ; } LVALUE_CHECK {
@@ -421,7 +455,6 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 		}
 		$$.dimlist = arr_to_list($4) ;
 		$$.arrlist = $4 ;
-
 		if($$.ptr != NULL)
 		{
 			symbol_table_row* right = calculate_offset($$.arrlist , $$.ptr -> dimlist , get_size($$.ptr -> eletype)) ;
@@ -431,17 +464,19 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; } LVALUE_CHECK {
 			offset = add_offsets(offset , struct_offset) ;
 			offset = add_offsets(offset , right) ;
 
-			$$.offset = offset ;
-			if($1.ptr == NULL || list_length($1.dimlist) < list_length($1.ptr -> dimlist))
-			{
-				printf("Cannot de-reference a non-struct type '%s' on line no : %d\n\n", $1.val , line_no) ;
-				parse_error = 1 ;
-				$$.type = -1 ;
-			}
+			$$.offset = offset ;			
 		}
 		else
 		{
-			printf("'%s' not declared in scope of '%s' on line no : %d\n\n", $3.val , $1.val , line_no) ;
+			if($1.ptr != NULL && $1.ptr -> type == STRUCT_T)
+				printf("'%s' not declared in scope of '%s' on line no : %d\n\n", $3.val , $1.val , line_no) ;
+		}
+
+		if($1.ptr == NULL || list_length($1.dimlist) < list_length($1.ptr -> dimlist) || $1.ptr -> type != STRUCT_T)
+		{
+			printf("Cannot de-reference a non-struct type '%s' on line no : %d\n\n", $1.val , line_no) ;
+			parse_error = 1 ;
+			$$.type = -1 ;
 		}
 	}
 	;
@@ -525,6 +560,12 @@ EXPR : EXPR ASOP TERM {
 			printf("Invalid operands for \'+\' on line_no : %d\n", line_no) ;
 			parse_error = 1 ;
 		}
+
+		else if($1.temp -> type == ARRAY || $3.temp -> type == ARRAY)
+		{
+			printf("Arrays cannot be used as operands for '%c' on line no : %d .\n\n", $2 , line_no) ;
+			parse_error = 1 ;
+		}
 		else
 		{
 			$$.temp =  st_new_temp(st , expr_t , cur_scope) ;
@@ -560,6 +601,11 @@ TERM : TERM MDOP FACTOR {
 		{
 			printf("Invalid operands for \'*\' on line_no : %d\n\n", line_no) ;
 			parse_error = 1 ;
+		}
+		else if($1.temp -> type == ARRAY || $3.temp -> type == ARRAY)
+		{
+			printf("Arrays cannot be used as operands for '%c' on line no : %d .\n\n", $2 , line_no) ;
+			parse_error ;
 		}
 		else
 		{
@@ -624,17 +670,9 @@ FACTOR : '(' EXPR ')'  {
 		if($1.ptr != NULL)
 		{
 			symbol_table_row* resolved = resolve($1.ptr , $1.dimlist) ;
-			if(resolved -> type == ARRAY)
+			if($1.offset != NULL)
 			{
-				printf("Array %s cannot be a part of an arithmetic expression on liene no : %d . \n\n\n", $1.val , line_no) ;
-				parse_error = 1 ;
-				$$.temp = NULL ;
-				$$.type = -1 ;
-				$$.val = "" ;
-			}
-			else if($1.offset != NULL)
-			{
-				symbol_table_row* temp = st_new_temp(st , $1.type , cur_scope) ;
+				symbol_table_row* temp = st_new_temp_from_row(st , resolved , cur_scope) ;
 				char code[100] ;		
 				sprintf(code , "%s = %s[%s]" , temp -> name , get_first($1.val) , $1.offset -> name) ;
 				ic = ic_add(ic , NOT_GOTO , code , -1) ;

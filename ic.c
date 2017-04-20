@@ -37,7 +37,29 @@ void ic_print(inter_code* ic)
 {
 	while(ic != NULL)
 	{
-		printf("%d : %s\n", ic -> quad , ic -> code) ;
+		printf("%-2d : %s\n", ic -> quad , ic -> code) ;
 		ic = ic -> next ;
 	}
+}
+
+inter_code* ic_get(inter_code* ic , int quad)
+{
+	if(ic == NULL)
+		return NULL ;
+	if(ic -> quad == quad)
+		return ic ;
+	return ic_get(ic -> next , quad) ;
+}
+
+inter_code* ic_backpatch(inter_code* ic , list* quads , int to_quad)
+{	
+	list* cur = quads ;
+	while(cur != NULL)
+	{		
+		inter_code* i = ic_get(ic , cur -> val) ;
+		sprintf(i -> code , "%s%d" , i -> code , to_quad) ;
+		i -> goto_quad = to_quad ;
+		cur = cur -> next ;
+	}
+	return ic ;
 }

@@ -53,6 +53,9 @@ typedef struct expr{
 	symbol_table_row* temp ;
 	int constant ; // is this a constant ?
 	char* val ; // if yes , then this is the value .
+	list* nextlist ;
+	list* truelist ; // used by boolean expr
+	list* falselist ; // used by boolean expr
 }expr ;
 
 typedef struct arr_list{
@@ -84,6 +87,8 @@ int get_size(int eletype) ;
 symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name) ;
 symbol_table_row* coerce(symbol_table_row* cur , int to_type) ;
 int equal_types(int t1 , int t2) ;
+char* relop_to_str(int type) ;
+
 %}
 %union{
 	char op ;
@@ -108,6 +113,15 @@ int equal_types(int t1 , int t2) ;
 %token <c> V_INT
 %token <c> V_FLOAT
 %token <c> V_CHAR
+%token <np> WHILE // this doexnt need any type .
+%token <np> IF // this doexnt need any type .
+%token <np> ELSE // this doexnt need any type .
+%token <np> LT 
+%token <np> GT 
+%token <np> LTE
+%token <np> GTE
+%token <np> EQ 
+
 %type <d> TYPE
 %type <d> DECL_LIST
 %type <d> DECL
@@ -118,12 +132,21 @@ int equal_types(int t1 , int t2) ;
 %type <d> SVAR_CHECK
 %type <l> DIM_LIST
 %type <al> ARR_LIST
-%type <c> ASG
+%type <e> ASG
 %type <i> LVALUE
 %type <i> LVALUE_CHECK
+%type <e> BLOCK
 %type <e> EXPR
 %type <e> TERM
 %type <e> FACTOR
+%type <e> WHILE_STMT
+%type <e> IF_STMT
+%type <e> IFELSE_STMT
+%type <e> BOOL_EXPR
+%type <e> AND_EXPR
+%type <np> M
+%type <e> BASE
+%type <np> RELOP
 %type <f> FUNC_DEF
 %type <f> FUNC_CALL
 %type <np> PARAM_LIST
@@ -131,6 +154,7 @@ int equal_types(int t1 , int t2) ;
 %type <np> ARGS_LIST
 %type <op> ASOP
 %type <op> MDOP
+
 %start S
 %%
 S : FUNC_DEF S
@@ -302,18 +326,26 @@ ARG_LIST : ARG_LIST ',' EXPR {
 	}
 	;
 STMTS : DECL STMTS
-	| '{' { sstk_push(sstk , cur_scope) ;
+	| BLOCK STMTS
+	| ASG STMTS
+	| FUNC_CALL STMTS
+	| EXPR ';' STMTS
+	| WHILE_STMT { 
+		ic = ic_backpatch(ic , $1.falselist , nextquad) ;
+	 } STMTS
+	| IF_STMT STMTS
+	| IFELSE_STMT STMTS
+	|
+	;
+BLOCK : '{' { sstk_push(sstk , cur_scope) ;
 		cur_scope = sm_get_scope() ;
 		sm = sm_add(sm , cur_scope , st) ;
 		st = sm_find(sm , cur_scope) ;
 	} STMTS '}' { cur_scope = sstk_pop(sstk) ; 
 		st = sm_find(sm , cur_scope) ;
-	} STMTS
-	| ASG STMTS
-	| FUNC_CALL STMTS
-	| EXPR ';' STMTS
-	|
+	}
 	;
+
 DECL_LIST :  DECL_LIST DECL
 		| DECL
 		;
@@ -427,7 +459,10 @@ ASG : LVALUE '=' EXPR ';' {
 			else
 			{
 				printf("Assignment of incompatible types on line no : %d .\n", line_no) ;
-				printf("Assigning '%s' to '%s' \n\n", to_str_eletype($3.type) , datatype_to_string(resolve($1.ptr , $1.dimlist))) ;
+				if($3.temp == NULL)
+					printf("Assigning '%s' to '%s' \n\n", to_str_eletype($3.type) , datatype_to_string(resolve($1.ptr , $1.dimlist))) ;
+				else
+					printf("Assigning '%s' to '%s' \n\n", datatype_to_string($3.temp) , datatype_to_string(resolve($1.ptr , $1.dimlist))) ;
 				parse_error = 1 ;
 			}
 		}
@@ -475,11 +510,14 @@ ASG : LVALUE '=' EXPR ';' {
 				}
 				ic = ic_add(ic , NOT_GOTO , code , -1) ;
 			}
-		}		
+		}
 		$$.type = $1.type ;
+		$$.temp = $1.ptr ;
+		$$.constant = 0 ;
+		$$.val = "" ;
 	}
 	;
-LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "global" ; } LVALUE_CHECK {		
+LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "<block>" ; } LVALUE_CHECK {		
 		$$.type = $4.type ;
 		$$.ptr = $4.ptr ;
 		$$.st = $4.st ;
@@ -524,9 +562,8 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "global" ; } LVALUE_CHECK {
 			symbol_table_row* struct_offset = sdf_offset(sdf , $1.ptr -> eletype , $3.val) ;
 
 			symbol_table_row* offset = $1.offset ;
-			offset = add_offsets(offset , struct_offset) ;
 			offset = add_offsets(offset , right) ;
-
+			offset = add_offsets(offset , struct_offset) ;
 			$$.offset = offset ;			
 		}
 
@@ -696,7 +733,7 @@ TERM : TERM MDOP FACTOR {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1 || is_struct($1.type) || is_char($1.type) || is_char($3.type))
 		{
-			printf("Invalid operands for \'*\' on line_no : %d\n\n", line_no) ;
+			printf("Invalid operands for \'%c\' on line_no : %d\n\n", $2 , line_no) ;
 			parse_error = 1 ;
 		}
 		else if(($1.temp != NULL && $1.temp -> type == ARRAY) || ($3.temp != NULL && $3.temp -> type == ARRAY))
@@ -788,7 +825,7 @@ FACTOR : '(' EXPR ')'  {
 		sprintf(val , "%c" , $1.c_val) ;
 		$$.val = val ;
 	}
-	| LVALUE {
+	| LVALUE {		
 		$$.type = $1.type ; 
 		$$.temp = $1.ptr ;
 		$$.constant = 0 ;
@@ -812,7 +849,140 @@ TYPE : T_INT { $$.type = T_INT ; cur_dt = T_INT ;}
 	| T_FLOAT { $$.type = T_FLOAT ; cur_dt = T_FLOAT ;}
 	| T_CHAR { $$.type = T_CHAR ; cur_dt = T_CHAR ;}
 	;
+
+WHILE_STMT : WHILE M '(' BOOL_EXPR ')' {
+		char code[100] ;
+		sprintf(code , "if %s == 0 goto " , $4.temp -> name) ;
+		$<e>$.falselist = list_add(NULL , nextquad) ;
+		ic = ic_add(ic , GOTO , code , -1) ; // we dont know where to go yet .
+	} BLOCK {
+		char code[100] ;
+		sprintf(code , "goto %d" , $2) ;
+		ic = ic_add(ic , GOTO , code , $2) ;
+		$$.falselist = $<e>6.falselist ;
+	}
+	;
+IF_STMT : IF '(' BOOL_EXPR ')' BLOCK { $$.falselist = NULL ; }
+	;
+IFELSE_STMT : IF_STMT ELSE BLOCK { $$.falselist = NULL ; }
+M : { $$ = nextquad ; }
+	;
+
+RELOP : LT { $$ = LT ;}
+	| GT { $$ = GT ; }
+	| LTE { $$ = LTE ; }
+	| GTE { $$ = GTE ; }
+	| EQ { $$ = EQ ; }
+	;
+
+BOOL_EXPR : BOOL_EXPR '|' AND_EXPR {
+		if($1.temp != NULL && $3.temp != NULL)
+		{
+			int expr_t = expr_type($1.type , $3.type) ;
+			symbol_table_row* left = coerce($1.temp , expr_t) ;
+			symbol_table_row* right = coerce($3.temp , expr_t) ;
+			symbol_table_row* res = st_new_temp(st , T_INT , cur_scope) ;
+			char code[100] ;
+			sprintf(code , "%s = %s | %s" , res -> name , $1.temp -> name , $3.temp -> name) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;
+		}
+		else
+		{
+			printf("Unknown  operand / operands for '|' on line no : %d\n", line_no) ;
+		}
+	}
+	| BASE{
+		$$.type = $1.type ;
+		$$.temp = $1.temp ;
+		$$.constant = $1.constant ;
+		$$.val = $1.val ;
+	}
+	;
+AND_EXPR : AND_EXPR '&' BASE {
+		if($1.temp != NULL && $3.temp != NULL)
+		{
+			int expr_t = expr_type($1.type , $3.type) ;
+			symbol_table_row* left = coerce($1.temp , expr_t) ;
+			symbol_table_row* right = coerce($3.temp , expr_t) ;
+			symbol_table_row* res = st_new_temp(st , T_INT , cur_scope) ;
+			char code[100] ;
+			sprintf(code , "%s = %s & %s" , res -> name ,  $1.temp -> name , $3.temp -> name) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;
+		}
+		else
+		{
+			printf("Unknown  operand / operands for '&' on line no : %d\n", line_no) ;
+		}
+	}
+	| BASE
+	;
+
+BASE : EXPR RELOP EXPR {
+		$$.temp = NULL ;
+		$$.constant = 0 ;
+		$$.type = -1 ;
+		$$.val = "" ;
+		int expr_t = expr_type($1.type , $3.type) ;
+		if(expr_t == -1 || is_struct($1.type) || is_char($1.type) || is_char($3.type))
+		{
+			printf("Invalid operands for \'%c\' on line_no : %d\n\n", $2 , line_no) ;
+			parse_error = 1 ;
+		}
+		else if(($1.temp != NULL && $1.temp -> type == ARRAY) || ($3.temp != NULL && $3.temp -> type == ARRAY))
+		{
+			printf("Arrays cannot be used as operands for '%c' on line no : %d .\n\n", $2 , line_no) ;
+			parse_error ;
+		}
+		else
+		{
+			$$.temp =  st_new_temp(st , expr_t , cur_scope) ;
+			$$.constant = 0 ;
+			$$.val = "" ;
+			char left[100] ;
+			if($1.constant != 0)
+			{
+				if(is_int($1.constant) && is_float(expr_t))
+				{
+					symbol_table_row* new = st_new_temp(st , T_FLOAT , cur_scope) ;
+					char code[100] ;
+					sprintf(code , "%s = (float)%s" , new -> name , $1.val) ;
+					ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					$1.val = new -> name ;
+				}
+				sprintf(left , "%s" , $1.val) ;
+			}
+			else
+			{
+				symbol_table_row* l = coerce($1.temp , expr_t) ;
+				sprintf(left , "%s" , l -> name) ;
+			}
+			char right[100] ;
+			if($3.constant != 0)
+			{
+				if(is_int($3.constant) && is_float(expr_t))
+				{
+					symbol_table_row* new = st_new_temp(st , T_FLOAT , cur_scope) ;
+					char code[100] ;
+					sprintf(code , "%s = (float)%s" , new -> name , $3.val) ;
+					ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					$3.val = new -> name ;
+				}
+				sprintf(right , "%s" , $3.val) ;
+			}
+			else
+			{
+				symbol_table_row* r = coerce($3.temp , expr_t) ;
+				sprintf(right , "%s" , r -> name) ;
+			}
+			char code[100] ;
+			sprintf(code , "%s = %s %s %s" , $$.temp -> name , left , relop_to_str($2) , right) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;
+		}
+		$$.type = expr_t ;
+	}
+	;
 %%
+
 symbol_table_row* resolve(symbol_table_row* str , list* dimlist)
 {	
 	if(str == NULL)
@@ -1131,4 +1301,19 @@ int equal_types(int t1 , int t2)
 	else if(t1 != -1 && t2 != -1)
 		return t1 == t2 ;
 	return 0 ;
+}
+
+char* relop_to_str(int type)
+{
+	if(type == LT)
+		return "<" ;
+	if(type == GT)
+		return ">" ;
+	if(type == LTE)
+		return "<=" ;
+	if(type == GTE)
+		return ">=" ;
+	if(type == EQ)
+		return "==" ;
+	return "(unknown)" ;
 }

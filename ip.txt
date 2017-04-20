@@ -1,21 +1,10 @@
-struct ab{
-	int a ;
-	int b ;
-} ;
-struct cd {
-	int b ;
-	struct ab a ;
-	float c ;
-} ;
-
-int func2(float a , float b)
-{
-	
-}
-
 int func()
 {
-	struct cd c ;
-	c.a = 3 ;
-	
+	int a ;
+	a= 4;
+	while(a < 5 + 3.0)
+	{
+		int a ;
+		a = 5 ;
+	}
 }

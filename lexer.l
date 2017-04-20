@@ -28,6 +28,18 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		yylval.d.type = T_STRUCT ;
 		return T_STRUCT ;
 		}
+"while" {
+		yylval.np = -1 ;
+		return WHILE ;
+	}
+"if" {
+		yylval.np = -1 ;
+		return IF ;
+	}
+"else" {
+		yylval.np = -1 ;
+		return ELSE ;
+	}
 {id}	{
 		char* copy = (char*) malloc(sizeof(strlen(yytext) + 1)) ;
 		strcpy(copy , yytext) ;
@@ -47,6 +59,34 @@ id [a-zA-Z][a-zA-Z0-9_]*
 			// printf("%s\n", yytext) ;
 			return V_INT ;
 	   }
+"|" 	{
+		// printf("Lex : | detected\n") ; 
+		return '|' ; 
+		}
+"&" 	{
+		// printf("Lex : & detected\n") ; 
+		return '&' ; 
+		}
+"==" 	{
+		// printf("Lex : == detected\n") ; 
+		return EQ ; 
+		}
+"<=" 	{
+		// printf("Lex : <= detected\n") ; 
+		return LTE ; 
+		}
+">=" 	{
+		// printf("Lex : >= detected\n") ; 
+		return GTE ; 
+		}
+"<" 	{
+		// printf("Lex : < detected\n") ; 
+		return LT ; 
+		}
+">" 	{
+		// printf("Lex : > detected\n") ; 
+		return GT ; 
+		}	
 "," 	{
 		// printf("Lex : , detected\n") ; 
 		return ',' ; 

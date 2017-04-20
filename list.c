@@ -54,3 +54,18 @@ int list_length(list* head)
 		return 0 ;
 	return 1 + list_length(head -> next) ;
 }
+
+list* list_merge(list* a , list* b)
+{
+	if(a == NULL && b == NULL)
+		return NULL ;
+	if(a == NULL)
+		return b ;
+	if(b == NULL)
+		return a ;
+	list* res = a ;
+	while(a -> next != NULL)
+		a = a -> next ;
+	a -> next = b ;
+	return res ;
+}

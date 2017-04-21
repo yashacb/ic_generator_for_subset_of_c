@@ -1,7 +1,5 @@
-int func1 ( char a )
+int main()
 {
-	int a;
-	if ( a > 5 )
-	{
-	}
+	int a[10][30] , x ;
+	a[2][x] = 2 ;
 }

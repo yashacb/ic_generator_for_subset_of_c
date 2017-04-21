@@ -123,6 +123,7 @@ symbol_table* st_new()
 	symbol_table* new_st = (symbol_table*) malloc(sizeof(symbol_table)) ;
 	new_st -> size = 0 ;
 	new_st -> list = NULL ;
+	return new_st ;
 }
 
 int st_size(symbol_table* st)

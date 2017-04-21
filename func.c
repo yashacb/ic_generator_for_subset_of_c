@@ -93,7 +93,7 @@ void ft_print(func_table* ft)
 				printf(" ,\n");
 			i++ ;
 		}
-		printf("\n");
+		printf("\n\n");
 		printf("Printing local list : \n") ;
 		st_print(cur -> local_list) ;
 		cur = cur -> next ;

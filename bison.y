@@ -26,6 +26,7 @@ struct_def* sdf = NULL ;
 scope_stack* sstk = NULL ;
 scope_map* sm = NULL ;
 inter_code* ic = NULL ;
+list* hlt_list = NULL ;
 
 int ind_dim = 0 ;
 int line_no = 1 ;
@@ -654,13 +655,14 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "<block>" ; } LVALUE_CHECK {
 LVALUE_CHECK : {	
 		char* val = $<i>-2.val ;
 		list* cur = arr_to_list($<al>-1) ;
+		arr_list* cur_al = $<al>-1 ;
 		symbol_table* cur_st = $<i>0.st ;
 		symbol_table_row* res = st_find(cur_st , val , cur_scope) ;
 		if(res == NULL)
 		{
 			$$.type = -1 ;
 
-			printf("'%s' is not declared in '%s''s scope on line no : %d. \n\n" , val , $<i>-0.val , line_no) ;
+			printf("'%s' is not declared in '%s s' scope on line no : %d. \n\n" , val , $<i>-0.val , line_no) ;
 			parse_error = 1 ;
 		}
 		else
@@ -679,7 +681,15 @@ LVALUE_CHECK : {
 						parse_error = 1 ;
 					}
 				}
+				else
+				{
+					char code[100] ;
+					hlt_list = list_add(hlt_list , nextquad) ;
+					sprintf(code , "if %s >= %d goto " , cur_al -> e.temp -> name , dimlist -> val) ;
+					ic = ic_add(ic , GOTO , code , -1) ;
+				}
 				ind ++ ;
+				cur_al = cur_al -> next ;
 				cur = cur -> next ;
 				dimlist = dimlist -> next ;
 			}
@@ -1204,6 +1214,14 @@ symbol_table_row* sdf_offset(struct_def* sdf , int eletype , char* name) // offs
 	{
 		if(strcmp(cur -> name , name) == 0)
 		{
+			if(offset == NULL)
+			{
+				char code[100] ;
+				symbol_table_row* temp = st_new_temp(st , T_INT , cur_scope) ;
+				sprintf(code , "%s = 0" , temp -> name) ;
+				ic = ic_add(ic , NOT_GOTO , code , -1) ;
+				return temp ;
+			}
 			return offset ;
 		}
 		int size = get_size(cur -> eletype) ;

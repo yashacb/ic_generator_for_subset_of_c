@@ -2223,6 +2223,7 @@ int main()
 	yyparse() ;	
 	if(!parse_error)
 	{
+		ic = ic_backpatch(ic , hlt_list , nextquad) ;
 		ic_print(ic) ;
 		sm_print_table(sm) ;
 		// st_print(st) ;
@@ -2234,7 +2235,7 @@ int main()
 	// 	for(i = 0 ; i < 80 ; i++)
 	// 		printf("-") ;	
 		// printf("\n\nPrinting function defenitions table:\n\n") ;
-		ft_print(ft) ;
+		// ft_print(ft) ;
 	// 	for(i = 0 ; i < 80 ; i++)
 	// 		printf("-") ;	
 	// 	printf("\n\nParse successful\n");

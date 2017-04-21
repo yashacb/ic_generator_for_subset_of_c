@@ -1,10 +1,25 @@
+int func2(float a)
+{
+	
+}
+
 int func()
 {
-	int a ;
-	a= 4;
-	while(a < 5 + 3.0)
+	int a[2] ;
+	if(a[0] >= 2 | a[1] < 54 & 3 == 2)
 	{
-		int a ;
-		a = 5 ;
+		if(3 == 5)
+		{
+			a[0] = 21 ;
+		}
+		else
+		{
+			a[0] = 3 ;
+		}
 	}
+	else
+	{
+		a[1] = 25 ;
+	}
+	a[0] = 2 + 6 ;
 }

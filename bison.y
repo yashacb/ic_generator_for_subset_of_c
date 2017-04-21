@@ -255,23 +255,45 @@ ARG_LIST : ARG_LIST ',' EXPR {
 			{
 				if($3.temp != NULL)
 				{
-					symbol_table_row* found = $3.temp ;		
-					if(st_compare(expected , found) != 1)
+					symbol_table_row* found = $3.temp ;
+					if(expected -> dimlist == NULL && found -> dimlist == NULL && is_float(expected -> eletype) && is_int($3.temp -> eletype))	
+					{
+						symbol_table_row* temp = st_new_temp(st , T_FLOAT , cur_scope) ;
+						char code[100] ;
+						sprintf(code , "%s = (float)%s" , temp -> name , $3.temp -> name) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+						sprintf(code , "param %s" , temp -> name) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					}
+					else if(st_compare(expected , found) != 1)
 					{
 						printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
 						printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
 						parse_error = 1 ;
 					}
-					char code[100] ;
-					sprintf(code , "param %s" , $3.temp -> name) ;
-					ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					else
+					{
+						char code[100] ;
+						sprintf(code , "param %s" , $3.temp -> name) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					}
 				}
 				else
 				{
-					if(!equal_types(expected -> eletype , $3.constant))
+					if(expected -> dimlist == NULL && is_float(expected -> eletype) && $3.constant == V_INT)
+					{
+						symbol_table_row* temp = st_new_temp(st , T_FLOAT , cur_scope) ;
+						char code[100] ;
+						sprintf(code , "%s = (float)%s" , temp -> name , $3.val) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+						sprintf(code , "param %s" , $3.val) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					}
+					else if(expected -> dimlist != NULL || !equal_types(expected -> eletype , $3.constant))
 					{
 						printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
 						printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , to_str_eletype($3.constant == 0 ? -1 : $3.constant)) ;
+						parse_error = 1 ;
 					}
 					else
 					{
@@ -293,8 +315,17 @@ ARG_LIST : ARG_LIST ',' EXPR {
 			{
 				if($1.temp != NULL)
 				{
-					symbol_table_row* found = $1.temp ;			
-					if(st_compare(expected , found) != 1)
+					symbol_table_row* found = $1.temp ;	
+					if(expected -> dimlist == NULL && found -> dimlist == NULL && is_float(expected -> eletype) && is_int($1.temp -> eletype))	
+					{
+						symbol_table_row* temp = st_new_temp(st , T_FLOAT , cur_scope) ;
+						char code[100] ;
+						sprintf(code , "%s = (float)%s" , temp -> name , $1.temp -> name) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+						sprintf(code , "param %s" , temp -> name) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					}	
+					else if(st_compare(expected , found) != 1)
 					{
 						printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
 						printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , datatype_to_string(found)) ;
@@ -309,10 +340,20 @@ ARG_LIST : ARG_LIST ',' EXPR {
 				}
 				else
 				{
-					if(!equal_types(expected -> eletype , $1.constant))
+					if(expected -> dimlist == NULL && is_float(expected -> eletype) && $1.constant == V_INT)
+					{
+						symbol_table_row* temp = st_new_temp(st , T_FLOAT , cur_scope) ;
+						char code[100] ;
+						sprintf(code , "%s = (float)%s" , temp -> name , $1.val) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+						sprintf(code , "param %s" , $1.val) ;
+						ic = ic_add(ic , NOT_GOTO , code , -1) ;
+					}
+					else if(expected -> dimlist != NULL || !equal_types(expected -> eletype , $1.constant))
 					{
 						printf("Incorrect argument %d for function '%s' on line no : %d .\n", $$ + 1 , call_func_ptr -> name , line_no) ;
 						printf("Expected %s , but found %s\n\n" , datatype_to_string(expected) , to_str_eletype($1.constant == 0 ? -1 : $1.constant)) ;
+						parse_error = 1 ;
 					}
 					else
 					{
@@ -333,8 +374,12 @@ STMTS : DECL STMTS
 	| WHILE_STMT { 
 		ic = ic_backpatch(ic , $1.falselist , nextquad) ;
 	 } STMTS
-	| IF_STMT STMTS
-	| IFELSE_STMT STMTS
+	| IF_STMT {
+		ic = ic_backpatch(ic , $1.falselist , nextquad) ;
+	} STMTS
+	| IFELSE_STMT {
+		ic = ic_backpatch(ic , $1.truelist , nextquad) ;
+	} STMTS
 	|
 	;
 BLOCK : '{' { sstk_push(sstk , cur_scope) ;
@@ -465,6 +510,12 @@ ASG : LVALUE '=' EXPR ';' {
 					printf("Assigning '%s' to '%s' \n\n", datatype_to_string($3.temp) , datatype_to_string(resolve($1.ptr , $1.dimlist))) ;
 				parse_error = 1 ;
 			}
+		}
+		else if($1.type == T_INT && (is_float($3.type) || is_float($3.constant)))
+		{
+			printf("Assignment of incompatible type on line no : %d\n", line_no) ;
+			printf("Assigning 'float' to an 'int' . \n\n\n") ;
+			parse_error = 1 ;
 		}
 		else
 		{			
@@ -862,9 +913,21 @@ WHILE_STMT : WHILE M '(' BOOL_EXPR ')' {
 		$$.falselist = $<e>6.falselist ;
 	}
 	;
-IF_STMT : IF '(' BOOL_EXPR ')' BLOCK { $$.falselist = NULL ; }
+IF_STMT : IF '(' BOOL_EXPR ')'  { 
+		$<e>$.falselist = list_add(NULL , nextquad) ;
+		char code[100] ;
+		sprintf(code , "if %s == 0 goto " , $3.temp -> name) ;
+		ic = ic_add(ic , GOTO , code , -1) ;
+	 } BLOCK { $$.falselist = $<e>5.falselist ; }
 	;
-IFELSE_STMT : IF_STMT ELSE BLOCK { $$.falselist = NULL ; }
+IFELSE_STMT : IF_STMT { 
+		$<e>$.truelist = list_add(NULL , nextquad) ;
+		char code[100] ;
+		sprintf(code , "goto ") ;
+		ic = ic_add(ic , GOTO , code , -1) ;
+		ic = ic_backpatch(ic , $1.falselist , nextquad) ;
+	 } ELSE BLOCK { $$.truelist = $<e>2.truelist ; }
+	 ;
 M : { $$ = nextquad ; }
 	;
 
@@ -885,13 +948,22 @@ BOOL_EXPR : BOOL_EXPR '|' AND_EXPR {
 			char code[100] ;
 			sprintf(code , "%s = %s | %s" , res -> name , $1.temp -> name , $3.temp -> name) ;
 			ic = ic_add(ic , NOT_GOTO , code , -1) ;
+			$$.temp = res ;
+			$$.type = res -> eletype ;
+			$$.constant = 0 ;
+			$$.val = "" ;
 		}
 		else
 		{
 			printf("Unknown  operand / operands for '|' on line no : %d\n", line_no) ;
+			parse_error = 1 ;
+			$$.temp = NULL ;
+			$$.type = -1 ;
+			$$.constant = 0 ;
+			$$.val = "" ;		
 		}
 	}
-	| BASE{
+	| AND_EXPR{
 		$$.type = $1.type ;
 		$$.temp = $1.temp ;
 		$$.constant = $1.constant ;
@@ -908,13 +980,27 @@ AND_EXPR : AND_EXPR '&' BASE {
 			char code[100] ;
 			sprintf(code , "%s = %s & %s" , res -> name ,  $1.temp -> name , $3.temp -> name) ;
 			ic = ic_add(ic , NOT_GOTO , code , -1) ;
+			$$.temp = res ;
+			$$.type = res -> eletype ;
+			$$.constant = 0 ;
+			$$.val = "" ;
 		}
 		else
 		{
 			printf("Unknown  operand / operands for '&' on line no : %d\n", line_no) ;
+			parse_error = 1 ;
+			$$.temp = NULL ;
+			$$.type = -1 ;
+			$$.constant = 0 ;
+			$$.val = "" ;
 		}
 	}
-	| BASE
+	| BASE{
+		$$.type = $1.type ;
+		$$.temp = $1.temp ;
+		$$.constant = $1.constant ;
+		$$.val = $1.val ;
+	}
 	;
 
 BASE : EXPR RELOP EXPR {
@@ -925,13 +1011,13 @@ BASE : EXPR RELOP EXPR {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1 || is_struct($1.type) || is_char($1.type) || is_char($3.type))
 		{
-			printf("Invalid operands for \'%c\' on line_no : %d\n\n", $2 , line_no) ;
+			printf("Invalid operands for \'%c\' on line_no : %d\n\n", relop_to_str($2) , line_no) ;
 			parse_error = 1 ;
 		}
 		else if(($1.temp != NULL && $1.temp -> type == ARRAY) || ($3.temp != NULL && $3.temp -> type == ARRAY))
 		{
 			printf("Arrays cannot be used as operands for '%c' on line no : %d .\n\n", $2 , line_no) ;
-			parse_error ;
+			parse_error = 1 ;
 		}
 		else
 		{

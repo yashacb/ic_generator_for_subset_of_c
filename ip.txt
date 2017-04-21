@@ -1,25 +1,6 @@
-int func2(float a)
+int main()
 {
-	
-}
-
-int func()
-{
-	int a[2] ;
-	if(a[0] >= 2 | a[1] < 54 & 3 == 2)
-	{
-		if(3 == 5)
-		{
-			a[0] = 21 ;
-		}
-		else
-		{
-			a[0] = 3 ;
-		}
-	}
-	else
-	{
-		a[1] = 25 ;
-	}
-	a[0] = 2 + 6 ;
+	int a ;
+	a = 5 +a ;
+	return 1 + 2.5;
 }

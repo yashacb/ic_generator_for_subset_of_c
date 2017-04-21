@@ -121,6 +121,7 @@ char* relop_to_str(int type) ;
 %token <np> LTE
 %token <np> GTE
 %token <np> EQ 
+%token <np> RETURN
 
 %type <d> TYPE
 %type <d> DECL_LIST
@@ -181,7 +182,7 @@ FUNC_DEF : TYPE ID {
 		cur_func_ptr -> param_list = st_new() ;
 		cur_func_ptr -> param_list -> list = st -> list ;		
 		cur_func_ptr -> num_param = $5 ;
-	} '{' STMTS '}' { 
+	} '{' STMTS RETURN_STMT '}' { 
 		char code[100] ;
 		sprintf(code , "func end") ;
 		ic = ic_add(ic , NOT_GOTO , code , -1) ;
@@ -192,6 +193,30 @@ FUNC_DEF : TYPE ID {
 		cur_func_ptr = NULL ;
 		$$ = NULL ; }
 	;
+RETURN_STMT: RETURN ';' {
+		char code[100] ;
+		sprintf(code , "return") ;
+		ic = ic_add(ic , NOT_GOTO , code , -1) ;
+	}
+	| RETURN EXPR ';' {
+		char code[100] ;
+		if($2.temp != NULL)
+		{
+			sprintf(code , "return %s" , $2.temp -> name) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;				
+		}
+		else if($2.constant != 0)
+		{
+			sprintf(code , "return %s" , $2.val) ;
+			ic = ic_add(ic , NOT_GOTO , code , -1) ;			
+		}
+		else
+		{
+			printf("Unknown return value for function %s on line no : %d\n", cur_func_ptr -> name , line_no) ;
+			parse_error = 1 ;
+		}
+	}
+	| 
 PARAM_LIST : TYPE VAR {
 		if($2.ptr != NULL)
 			$2.ptr -> eletype = $1.type ;
@@ -1011,12 +1036,12 @@ BASE : EXPR RELOP EXPR {
 		int expr_t = expr_type($1.type , $3.type) ;
 		if(expr_t == -1 || is_struct($1.type) || is_char($1.type) || is_char($3.type))
 		{
-			printf("Invalid operands for \'%c\' on line_no : %d\n\n", relop_to_str($2) , line_no) ;
+			printf("Invalid operands for \'%s\' on line_no : %d\n\n", relop_to_str($2) , line_no) ;
 			parse_error = 1 ;
 		}
 		else if(($1.temp != NULL && $1.temp -> type == ARRAY) || ($3.temp != NULL && $3.temp -> type == ARRAY))
 		{
-			printf("Arrays cannot be used as operands for '%c' on line no : %d .\n\n", $2 , line_no) ;
+			printf("Arrays cannot be used as operands for '%s' on line no : %d .\n\n", relop_to_str($2) , line_no) ;
 			parse_error = 1 ;
 		}
 		else

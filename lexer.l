@@ -40,6 +40,10 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		yylval.np = -1 ;
 		return ELSE ;
 	}
+"return" {
+		yylval.np = -1 ;
+		return RETURN ;
+	}
 {id}	{
 		char* copy = (char*) malloc(sizeof(strlen(yytext) + 1)) ;
 		strcpy(copy , yytext) ;
@@ -128,15 +132,15 @@ id [a-zA-Z][a-zA-Z0-9_]*
 		return '*' ; 
 		}
 "+" 	{
-		// printf("Lex : * detected\n") ; 
+		// printf("Lex : + detected\n") ; 
 		return '+' ; 
 		}
 "/" 	{
-		// printf("Lex : * detected\n") ; 
+		// printf("Lex : / detected\n") ; 
 		return '/' ; 
 		}
 "-" 	{
-		// printf("Lex : * detected\n") ; 
+		// printf("Lex : - detected\n") ; 
 		return '-' ; 		
 		}
 "'"[a-zA-Z0-9_]"'" {
@@ -250,7 +254,7 @@ int main()
 	// 	for(i = 0 ; i < 80 ; i++)
 	// 		printf("-") ;	
 		// printf("\n\nPrinting function defenitions table:\n\n") ;
-		// ft_print(ft) ;
+		ft_print(ft) ;
 	// 	for(i = 0 ; i < 80 ; i++)
 	// 		printf("-") ;	
 	// 	printf("\n\nParse successful\n");

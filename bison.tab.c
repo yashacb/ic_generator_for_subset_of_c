@@ -551,8 +551,8 @@ static const yytype_uint16 yyrline[] =
      475,   482,   491,   502,   505,   509,   596,   596,   620,   620,
      654,   705,   706,   728,   729,   731,   794,   801,   802,   804,
      867,   874,   880,   888,   896,   904,   924,   925,   926,   929,
-     929,   941,   941,   948,   948,   956,   959,   960,   961,   962,
-     963,   966,   991,   998,  1023,  1031
+     929,   945,   945,   956,   956,   964,   967,   968,   969,   970,
+     971,   974,   999,  1006,  1031,  1039
 };
 #endif
 
@@ -1938,7 +1938,7 @@ yyreduce:
 
   case 55:
 #line 509 "bison.y" /* yacc.c:1646  */
-    {		
+    {	
 		symbol_table_row* resolved = resolve((yyvsp[-3].i).ptr , (yyvsp[-3].i).dimlist) ;	
 		if(resolved != NULL && resolved -> type == ARRAY)
 		{
@@ -2469,98 +2469,106 @@ yyreduce:
   case 79:
 #line 929 "bison.y" /* yacc.c:1646  */
     {
-		char code[100] ;
-		sprintf(code , "if %s == 0 goto " , (yyvsp[-1].e).temp -> name) ;
-		(yyval.e).falselist = list_add(NULL , nextquad) ;
-		ic = ic_add(ic , GOTO , code , -1) ; // we dont know where to go yet .
+		(yyval.e).falselist = NULL ;
+		if((yyvsp[-1].e).temp != NULL)
+		{
+			char code[100] ;
+			sprintf(code , "if %s == 0 goto " , (yyvsp[-1].e).temp -> name) ;
+			(yyval.e).falselist = list_add(NULL , nextquad) ;
+			ic = ic_add(ic , GOTO , code , -1) ; // we dont know where to go yet .
+		}
 	}
-#line 2478 "bison.tab.c" /* yacc.c:1646  */
+#line 2482 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 80:
-#line 934 "bison.y" /* yacc.c:1646  */
+#line 938 "bison.y" /* yacc.c:1646  */
     {
 		char code[100] ;
 		sprintf(code , "goto %d" , (yyvsp[-5].np)) ;
 		ic = ic_add(ic , GOTO , code , (yyvsp[-5].np)) ;
 		(yyval.e).falselist = (yyvsp[-1].e).falselist ;
 	}
-#line 2489 "bison.tab.c" /* yacc.c:1646  */
+#line 2493 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 81:
-#line 941 "bison.y" /* yacc.c:1646  */
+#line 945 "bison.y" /* yacc.c:1646  */
     { 
-		(yyval.e).falselist = list_add(NULL , nextquad) ;
-		char code[100] ;
-		sprintf(code , "if %s == 0 goto " , (yyvsp[-1].e).temp -> name) ;
-		ic = ic_add(ic , GOTO , code , -1) ;
+		(yyval.e).falselist = NULL ;
+		if((yyvsp[-1].e).temp != NULL)
+		{
+			(yyval.e).falselist = list_add(NULL , nextquad) ;
+			char code[100] ;
+			sprintf(code , "if %s == 0 goto " , (yyvsp[-1].e).temp -> name) ;
+			ic = ic_add(ic , GOTO , code , -1) ;
+		}
 	 }
-#line 2500 "bison.tab.c" /* yacc.c:1646  */
+#line 2508 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 82:
-#line 946 "bison.y" /* yacc.c:1646  */
+#line 954 "bison.y" /* yacc.c:1646  */
     { (yyval.e).falselist = (yyvsp[-1].e).falselist ; }
-#line 2506 "bison.tab.c" /* yacc.c:1646  */
+#line 2514 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 83:
-#line 948 "bison.y" /* yacc.c:1646  */
-    { 
+#line 956 "bison.y" /* yacc.c:1646  */
+    { 		
 		(yyval.e).truelist = list_add(NULL , nextquad) ;
 		char code[100] ;
 		sprintf(code , "goto ") ;
 		ic = ic_add(ic , GOTO , code , -1) ;
 		ic = ic_backpatch(ic , (yyvsp[0].e).falselist , nextquad) ;
 	 }
-#line 2518 "bison.tab.c" /* yacc.c:1646  */
+#line 2526 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 84:
-#line 954 "bison.y" /* yacc.c:1646  */
+#line 962 "bison.y" /* yacc.c:1646  */
     { (yyval.e).truelist = (yyvsp[-2].e).truelist ; }
-#line 2524 "bison.tab.c" /* yacc.c:1646  */
+#line 2532 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 85:
-#line 956 "bison.y" /* yacc.c:1646  */
+#line 964 "bison.y" /* yacc.c:1646  */
     { (yyval.np) = nextquad ; }
-#line 2530 "bison.tab.c" /* yacc.c:1646  */
+#line 2538 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 86:
-#line 959 "bison.y" /* yacc.c:1646  */
+#line 967 "bison.y" /* yacc.c:1646  */
     { (yyval.np) = LT ;}
-#line 2536 "bison.tab.c" /* yacc.c:1646  */
+#line 2544 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 87:
-#line 960 "bison.y" /* yacc.c:1646  */
+#line 968 "bison.y" /* yacc.c:1646  */
     { (yyval.np) = GT ; }
-#line 2542 "bison.tab.c" /* yacc.c:1646  */
+#line 2550 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 88:
-#line 961 "bison.y" /* yacc.c:1646  */
+#line 969 "bison.y" /* yacc.c:1646  */
     { (yyval.np) = LTE ; }
-#line 2548 "bison.tab.c" /* yacc.c:1646  */
+#line 2556 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 89:
-#line 962 "bison.y" /* yacc.c:1646  */
+#line 970 "bison.y" /* yacc.c:1646  */
     { (yyval.np) = GTE ; }
-#line 2554 "bison.tab.c" /* yacc.c:1646  */
+#line 2562 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 90:
-#line 963 "bison.y" /* yacc.c:1646  */
+#line 971 "bison.y" /* yacc.c:1646  */
     { (yyval.np) = EQ ; }
-#line 2560 "bison.tab.c" /* yacc.c:1646  */
+#line 2568 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 91:
-#line 966 "bison.y" /* yacc.c:1646  */
+#line 974 "bison.y" /* yacc.c:1646  */
     {
 		if((yyvsp[-2].e).temp != NULL && (yyvsp[0].e).temp != NULL)
 		{
@@ -2586,22 +2594,22 @@ yyreduce:
 			(yyval.e).val = "" ;		
 		}
 	}
-#line 2590 "bison.tab.c" /* yacc.c:1646  */
+#line 2598 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 92:
-#line 991 "bison.y" /* yacc.c:1646  */
+#line 999 "bison.y" /* yacc.c:1646  */
     {
 		(yyval.e).type = (yyvsp[0].e).type ;
 		(yyval.e).temp = (yyvsp[0].e).temp ;
 		(yyval.e).constant = (yyvsp[0].e).constant ;
 		(yyval.e).val = (yyvsp[0].e).val ;
 	}
-#line 2601 "bison.tab.c" /* yacc.c:1646  */
+#line 2609 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 93:
-#line 998 "bison.y" /* yacc.c:1646  */
+#line 1006 "bison.y" /* yacc.c:1646  */
     {
 		if((yyvsp[-2].e).temp != NULL && (yyvsp[0].e).temp != NULL)
 		{
@@ -2627,22 +2635,22 @@ yyreduce:
 			(yyval.e).val = "" ;
 		}
 	}
-#line 2631 "bison.tab.c" /* yacc.c:1646  */
+#line 2639 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 94:
-#line 1023 "bison.y" /* yacc.c:1646  */
+#line 1031 "bison.y" /* yacc.c:1646  */
     {
 		(yyval.e).type = (yyvsp[0].e).type ;
 		(yyval.e).temp = (yyvsp[0].e).temp ;
 		(yyval.e).constant = (yyvsp[0].e).constant ;
 		(yyval.e).val = (yyvsp[0].e).val ;
 	}
-#line 2642 "bison.tab.c" /* yacc.c:1646  */
+#line 2650 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 95:
-#line 1031 "bison.y" /* yacc.c:1646  */
+#line 1039 "bison.y" /* yacc.c:1646  */
     {
 		(yyval.e).temp = NULL ;
 		(yyval.e).constant = 0 ;
@@ -2706,11 +2714,11 @@ yyreduce:
 		}
 		(yyval.e).type = expr_t ;
 	}
-#line 2710 "bison.tab.c" /* yacc.c:1646  */
+#line 2718 "bison.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2714 "bison.tab.c" /* yacc.c:1646  */
+#line 2722 "bison.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2938,7 +2946,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 1095 "bison.y" /* yacc.c:1906  */
+#line 1103 "bison.y" /* yacc.c:1906  */
 
 
 symbol_table_row* resolve(symbol_table_row* str , list* dimlist)

@@ -506,7 +506,7 @@ DIM_LIST : '[' V_INT ']' {
 		$$ = list_add($1 , $3.i_val) ;
 	}
 	; 
-ASG : LVALUE '=' EXPR ';' {		
+ASG : LVALUE '=' EXPR ';' {	
 		symbol_table_row* resolved = resolve($1.ptr , $1.dimlist) ;	
 		if(resolved != NULL && resolved -> type == ARRAY)
 		{
@@ -927,10 +927,14 @@ TYPE : T_INT { $$.type = T_INT ; cur_dt = T_INT ;}
 	;
 
 WHILE_STMT : WHILE M '(' BOOL_EXPR ')' {
-		char code[100] ;
-		sprintf(code , "if %s == 0 goto " , $4.temp -> name) ;
-		$<e>$.falselist = list_add(NULL , nextquad) ;
-		ic = ic_add(ic , GOTO , code , -1) ; // we dont know where to go yet .
+		$<e>$.falselist = NULL ;
+		if($4.temp != NULL)
+		{
+			char code[100] ;
+			sprintf(code , "if %s == 0 goto " , $4.temp -> name) ;
+			$<e>$.falselist = list_add(NULL , nextquad) ;
+			ic = ic_add(ic , GOTO , code , -1) ; // we dont know where to go yet .
+		}
 	} BLOCK {
 		char code[100] ;
 		sprintf(code , "goto %d" , $2) ;
@@ -939,13 +943,17 @@ WHILE_STMT : WHILE M '(' BOOL_EXPR ')' {
 	}
 	;
 IF_STMT : IF '(' BOOL_EXPR ')'  { 
-		$<e>$.falselist = list_add(NULL , nextquad) ;
-		char code[100] ;
-		sprintf(code , "if %s == 0 goto " , $3.temp -> name) ;
-		ic = ic_add(ic , GOTO , code , -1) ;
+		$<e>$.falselist = NULL ;
+		if($3.temp != NULL)
+		{
+			$<e>$.falselist = list_add(NULL , nextquad) ;
+			char code[100] ;
+			sprintf(code , "if %s == 0 goto " , $3.temp -> name) ;
+			ic = ic_add(ic , GOTO , code , -1) ;
+		}
 	 } BLOCK { $$.falselist = $<e>5.falselist ; }
 	;
-IFELSE_STMT : IF_STMT { 
+IFELSE_STMT : IF_STMT { 		
 		$<e>$.truelist = list_add(NULL , nextquad) ;
 		char code[100] ;
 		sprintf(code , "goto ") ;

@@ -1,5 +1,20 @@
+struct node
+{
+	int a ;
+	int b ;
+	float c ;
+};
+
+struct ab 
+{
+	int a , b ;
+	struct node n[3] ;
+	float c ;
+} ;
+
 int main()
 {
-	int a[10][30] , x ;
-	a[2][x] = 2 ;
+	struct ab a ;
+	int x ;
+	a.n[1.2].k = 1 ;
 }

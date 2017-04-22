@@ -27,6 +27,7 @@ scope_stack* sstk = NULL ;
 scope_map* sm = NULL ;
 inter_code* ic = NULL ;
 list* hlt_list = NULL ;
+char cur_arr_val[100] ;
 
 int ind_dim = 0 ;
 int line_no = 1 ;
@@ -166,10 +167,16 @@ S : FUNC_DEF S
 FUNC_DEF : TYPE ID {
 		if(ft_find(ft , $2.val) != NULL)
 		{
-			printf("Function '%s' already defined .\n", $2.val) ; // Think of improving this .
-			exit(0) ;
+			printf("Function '%s' already defined .\n\n", $2.val) ; // Think of improving this .
+			char name[100] ;
+			sprintf(name , "$%s" , $2.val) ;
+			cur_func_ptr = ft_add(ft , name , NULL , NULL , $1.type , 0) ;
+			parse_error = 1 ;
 		}
-		cur_func_ptr = ft_add(ft , $2.val , NULL , NULL , $1.type , 0) ;
+		else
+		{
+			cur_func_ptr = ft_add(ft , $2.val , NULL , NULL , $1.type , 0) ;
+		}		
 
 		char code[100] ;
 		sprintf(code , "function begin %s" , $2.val) ;
@@ -184,6 +191,7 @@ FUNC_DEF : TYPE ID {
 		cur_func_ptr -> param_list -> list = st -> list ;		
 		cur_func_ptr -> num_param = $5 ;
 	} '{' STMTS RETURN_STMT '}' { 
+		ft_pop(ft) ;
 		char code[100] ;
 		sprintf(code , "func end") ;
 		ic = ic_add(ic , NOT_GOTO , code , -1) ;
@@ -594,13 +602,13 @@ ASG : LVALUE '=' EXPR ';' {
 		$$.val = "" ;
 	}
 	;
-LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "<block>" ; } LVALUE_CHECK {		
-		$$.type = $4.type ;
-		$$.ptr = $4.ptr ;
-		$$.st = $4.st ;
-		$$.val = $4.val ;
-		$$.dimlist = arr_to_list($2) ;
-		$$.arrlist = $2 ;
+LVALUE : ID { sprintf(cur_arr_val , "%s" , $1.val) ; } ARR_LIST { $<i>$.st = st ; $<i>$.val = "<block>" ;} LVALUE_CHECK {		
+		$$.type = $5.type ;
+		$$.ptr = $5.ptr ;
+		$$.st = $5.st ;
+		$$.val = $5.val ;
+		$$.dimlist = arr_to_list($3) ;
+		$$.arrlist = $3 ;
 		$$.offset = NULL ;
 
 		if($$.ptr != NULL)
@@ -610,7 +618,7 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "<block>" ; } LVALUE_CHECK {
 			$$.offset = offset ;
 			$$.val = (char*) malloc(30*sizeof(30)) ;
 			$$.val = strcat2($$.val , $1.val) ;
-			list* cur = arr_to_list($2) ;
+			list* cur = arr_to_list($3) ;
 			while(cur != NULL)
 			{
 				cur = cur -> next ;
@@ -618,21 +626,21 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "<block>" ; } LVALUE_CHECK {
 			}
 		}
 	}
-	| LVALUE '.' ID ARR_LIST { $<i>$.st = $1.st ;  $<i>$.val = $1.val ; } LVALUE_CHECK {
-		$$.type = $6.type ;
-		$$.ptr = $6.ptr ;
-		$$.st = $6.st ;
+	| LVALUE '.' ID { sprintf(cur_arr_val , "%s.%s" , $1.val , $3.val) ; } ARR_LIST { $<i>$.st = $1.st ;  $<i>$.val = $1.val ; } LVALUE_CHECK {
+		$$.type = $7.type ;
+		$$.ptr = $7.ptr ;
+		$$.st = $7.st ;
 		$$.val = dupstr($1.val) ;
 		$$.val = strcat2($$.val , ".") ;
 		$$.val = strcat2($$.val , $3.val) ;
-		list* cur = arr_to_list($4) ;
+		list* cur = arr_to_list($5) ;
 		while(cur != NULL)
 		{
 			cur = cur -> next ;
 			$$.val = strcat2($$.val , "[]") ;
 		}
-		$$.dimlist = arr_to_list($4) ;
-		$$.arrlist = $4 ;
+		$$.dimlist = arr_to_list($5) ;
+		$$.arrlist = $5 ;
 		if($$.ptr != NULL)
 		{
 			symbol_table_row* right = calculate_offset($$.arrlist , $$.ptr -> dimlist , get_size($$.ptr -> eletype)) ;
@@ -653,7 +661,7 @@ LVALUE : ID  ARR_LIST { $<i>$.st = st ; $<i>$.val = "<block>" ; } LVALUE_CHECK {
 	}
 	;
 LVALUE_CHECK : {	
-		char* val = $<i>-2.val ;
+		char* val = $<i>-3.val ;
 		list* cur = arr_to_list($<al>-1) ;
 		arr_list* cur_al = $<al>-1 ;
 		symbol_table* cur_st = $<i>0.st ;
@@ -698,7 +706,7 @@ LVALUE_CHECK : {
 				printf("Number of dimensions exceeded for '%s' on line no : %d .\n", val , line_no) ;
 				printf("Declared dimensions : %d . Found dimensions : %d\n\n", ld , lc) ;
 				parse_error = 1 ;
-				res = NULL ;				
+				res = NULL ;		
 			}
 		}
 		$$.ptr = res ;
@@ -716,12 +724,12 @@ ARR_LIST : { $$ = NULL ; cur_arr_index = 0 ;}
 	| '[' EXPR  ']' ARR_LIST {
 		if($2.constant != 0 && $2.constant != V_INT)
 		{
-			printf("Array index no. %d (from last) is not an integer on line no : %d\n\n", cur_arr_index , line_no) ;
+			printf("Array index no. %d (from last) for array '%s' is not an integer on line no : %d\n\n", cur_arr_index , cur_arr_val , line_no) ;
 			parse_error = 1 ;
 		}
 		else if($2.temp != NULL && $2.temp -> eletype != T_INT)
 		{
-			printf("Array index %d (from last) is not an integer on line no : %d\n\n", cur_arr_index , line_no) ;	
+			printf("Array index %d (from last) for array '%s' is not an integer on line no : %d\n\n", cur_arr_index , cur_arr_val , line_no) ;
 			parse_error = 1 ;
 		}
 		$$ = (arr_list*) malloc(sizeof(arr_list)) ;

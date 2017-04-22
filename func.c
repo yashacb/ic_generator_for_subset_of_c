@@ -15,6 +15,17 @@ typedef struct func_table{
 	func_table_row* list ;
 }func_table ;
 
+func_table_row* ft_pop(func_table* ft)
+{
+	if(ft -> list != NULL && ft -> list -> name[0] == '$')
+	{
+		func_table_row* ret = ft -> list ;
+		ft -> list = ft -> list -> next ;
+		return ret ;
+	}
+	return NULL ;
+}
+
 symbol_table_row* ft_get_param(func_table_row* ft , int ind)
 {
 	if(ind < 0 || ind >= ft -> num_param || ft -> param_list -> list == NULL)

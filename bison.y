@@ -19,6 +19,7 @@ int is_array(int t) ;
 int is_struct(int t) ;
 int is_char(int t) ;
 int parse_error = 0 ;
+symbol_table_row* ret_name = NULL ;
 
 func_table* ft = NULL ;
 symbol_table* st = NULL ;
@@ -190,7 +191,7 @@ FUNC_DEF : TYPE ID {
 		cur_func_ptr -> param_list = st_new() ;
 		cur_func_ptr -> param_list -> list = st -> list ;		
 		cur_func_ptr -> num_param = $5 ;
-	} '{' STMTS RETURN_STMT '}' { 
+	} '{' STMTS '}' { 
 		ft_pop(ft) ;
 		char code[100] ;
 		sprintf(code , "func end") ;
@@ -226,6 +227,7 @@ RETURN_STMT: RETURN ';' {
 		}
 	}
 	| 
+	;
 PARAM_LIST : TYPE VAR {
 		if($2.ptr != NULL)
 			$2.ptr -> eletype = $1.type ;
@@ -267,6 +269,7 @@ FUNC_CALL : ID {
 				char code[100] ;
 				symbol_table_row* ret_temp = st_new_temp(st , call_func_ptr -> res_type , cur_scope) ;
 				sprintf(code , "refparam %s" , ret_temp -> name) ;
+				ret_name = ret_temp ;
 				ic = ic_add(ic , NOT_GOTO , code , -1) ;
 				sprintf(code , "call %s %d" , call_func_ptr -> name , call_func_ptr -> num_param) ;
 				ic = ic_add(ic , NOT_GOTO , code , -1) ;
@@ -414,7 +417,7 @@ STMTS : DECL STMTS
 	| IFELSE_STMT {
 		ic = ic_backpatch(ic , $1.truelist , nextquad) ;
 	} STMTS
-	|
+	| RETURN_STMT
 	;
 BLOCK : '{' { sstk_push(sstk , cur_scope) ;
 		cur_scope = sm_get_scope() ;
@@ -643,12 +646,12 @@ LVALUE : ID { sprintf(cur_arr_val , "%s" , $1.val) ; } ARR_LIST { $<i>$.st = st 
 		$$.arrlist = $5 ;
 		if($$.ptr != NULL)
 		{
-			symbol_table_row* right = calculate_offset($$.arrlist , $$.ptr -> dimlist , get_size($$.ptr -> eletype)) ;
 			symbol_table_row* struct_offset = sdf_offset(sdf , $1.ptr -> eletype , $3.val) ;
 
 			symbol_table_row* offset = $1.offset ;
-			offset = add_offsets(offset , right) ;
 			offset = add_offsets(offset , struct_offset) ;
+			symbol_table_row* right = calculate_offset($$.arrlist , $$.ptr -> dimlist , get_size($$.ptr -> eletype)) ;
+			offset = add_offsets(offset , right) ;
 			$$.offset = offset ;			
 		}
 
@@ -937,6 +940,12 @@ FACTOR : '(' EXPR ')'  {
 				$$.temp = temp ;
 			}
 		}
+	}
+	| FUNC_CALL {
+		$$.type = ret_name -> eletype ;
+		$$.temp = ret_name ;
+		$$.constant = 0 ;
+		$$.val = "" ;
 	}
 	;
 TYPE : T_INT { $$.type = T_INT ; cur_dt = T_INT ;}

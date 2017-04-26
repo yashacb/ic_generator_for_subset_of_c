@@ -5,7 +5,7 @@ c:
 	./test < ip.txt
 
 t:
-	bison bisonnnn.y
+	bison aio.y
 	flex lexer.l
 	gcc lex.yy.c -lfl -o test
 	./test < ip.txt

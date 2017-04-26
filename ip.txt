@@ -1,20 +1,27 @@
 struct node
 {
+	int a , b ;
+} ;
+
+struct ab
+{
 	int a ;
 	int b ;
-	float c ;
-};
-
-struct ab 
-{
-	int a , b ;
-	struct node n[3] ;
-	float c ;
+	struct node n ;
 } ;
+
+int fact(int x)
+{
+	if(x == 1)
+	{
+		return x ;
+	}
+	int y ;
+	y = fact(x) ; ;
+}
 
 int main()
 {
 	struct ab a ;
-	int x ;
-	a.n[1.2].k = 1 ;
+	a.n.a = 4 ;
 }
